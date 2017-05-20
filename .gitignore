@@ -1,0 +1,23 @@
+# Mac .DS_Store files
+*.DS_Store
+
+# IDEA settings
+.idea/
+
+# python files
+env/
+*.py[cod]
+
+# django environment variables
+.env
+.django_env
+
+# media files and generated static files
+staticfiles/**
+!staticfiles/**/
+!README.md
+
+# frontend files
+node_modules
+frontend/dist/*
+!frontend/dist/README.md

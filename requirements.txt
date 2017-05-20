@@ -1,0 +1,14 @@
+django
+dj_database_url
+dj_email_url
+django-dotenv
+tornado
+whitenoise
+psycopg2
+sqlalchemy
+pandas
+numpy
+slimit
+gunicorn
+python-dateutil
+click
