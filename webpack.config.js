@@ -21,9 +21,11 @@ const buildConfigs = {
     assetsRoot: path.resolve(__dirname, './frontend/dist'),
     assetsSubDirectory: 'static',
     assetsPublicPath: '/',
-    cssMinimize: true,
-    cssSourceMap: true,
+    cssMinimize: false,
+    cssSourceMap: false,
     cssExtract: true,
+    // cheap-module-eval-source-map is faster for development
+    devtool: '#cheap-module-eval-source-map',
     extraPlugins: [
       new webpack.HotModuleReplacementPlugin(),
       new webpack.NoEmitOnErrorsPlugin(),
@@ -36,8 +38,10 @@ const buildConfigs = {
     assetsSubDirectory: 'static',
     assetsPublicPath: '/',
     cssMinimize: true,
-    cssSourceMap: false,
+    cssSourceMap: true,
     cssExtract: true,
+    // source-map is better for debugging tools
+    devtool: '#source-map',  // or false to disable source map
     extraPlugins: [
       new webpack.optimize.UglifyJsPlugin({
         compress: {warnings: false},
@@ -278,6 +282,8 @@ module.exports = (options = {}) => {
         }
       ])
     ].concat(getConfig('extraPlugins') || []),
+
+    devtool: getConfig('devtool'),
 
     // development server
     devServer: {
