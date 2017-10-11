@@ -7,9 +7,9 @@
   "scripts": {
     "apidoc": "apidoc -o staticfiles/apidoc -f \".*\\\\.py\"",
     "clean": "rm -rf ./frontend/dist/*",
-    "dev": "NODE_ENV=development webpack-dev-server -d",
-    "watch": "NODE_ENV=development webpack -d -w",
-    "build": "npm run clean && NODE_ENV=production webpack -p --progress"
+    "dev": "webpack-dev-server -d",
+    "watch": "webpack -d -w",
+    "build": "npm run clean && webpack -p --progress --env.production"
   },
   "dependencies": {
     "axios": "^0.16.2",

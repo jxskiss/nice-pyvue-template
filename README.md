@@ -26,8 +26,6 @@ Frontend:
 
 - Single file yet full functionality and very flexible webpack 2.0+ config.
 - Well designed frontend files layout.
-- Public directory aimed to place compiled frontend files with git managed
-  to avoid building again in production environment.
 - Suitable for both single page application and multiple page application.
 - `npm run dev` to start a live development server with hot reloading.
 - `npm run apidoc` to build impressive api documentation with [Apidoc](http://apidocjs.com/).

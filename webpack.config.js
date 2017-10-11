@@ -52,7 +52,7 @@ const buildConfigs = {
     cssExtract: true,
     // cheap-module-eval-source-map is faster for development
     devtool: '#cheap-module-eval-source-map',
-    port: process.env.PORT || 8080,
+    port: 8080,
     // https://webpack.github.io/docs/webpack-dev-server.html#proxy
     proxy: {},
     // dev specific plugins
@@ -64,7 +64,8 @@ const buildConfigs = {
     outputFilename: (ext) => ext === 'ext' ? `[name].[ext]` : `[name].${ext}`
   },
   get: function (_path, options = {}) {
-    let config = process.env.NODE_ENV === 'production' ? this.build : this.dev;
+    let isProduction = options.production || process.env.NODE_ENV === 'production';
+    let config = isProduction ? this.build : this.dev;
     let properties = _path.split('.');
     let search = (root) => {
       let value = null;
@@ -153,8 +154,9 @@ function getPageEntries (globPath) {
   let entries = {}, paths, basename, pathname;
   glob.sync(globPath).forEach(entry => {
     basename = path.basename(entry, path.extname(entry));
-    paths = entry.split(path.sep)
-    pathname = paths.slice(paths.indexOf('pages') + 1, -1).concat([basename]).join(path.sep)
+    // node-glob uses forward-slashes only in glob expressions, even on windows
+    paths = entry.split('/');
+    pathname = paths.slice(paths.indexOf('pages') + 1, -1).concat([basename]).join(path.sep);
     entries[pathname] = entry;
   });
   return entries
@@ -309,7 +311,7 @@ module.exports = (options = {}) => {
       compress: true,
       historyApiFallback: true,
       hot: true,
-      port: buildConfigs.dev.port,
+      port: options.port || process.env.PORT || buildConfigs.dev.port,
       proxy: buildConfigs.dev.proxy
     }
   };
