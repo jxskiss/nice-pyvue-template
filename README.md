@@ -11,7 +11,7 @@ Django:
 - Config database and email settings using [dj_database_url](https://github.com/kennethreitz/dj-database-url) and [dj_email_url](https://github.com/migonzalvar/dj-email-url).
 - Simple single settings.py file, which can be easily extended to use multiple files.
 - Layout django apps under apps subdirectory, with `manage.py startapp` command patched.
-- Full functionality static file server with [WhiteNoise](http://whitenoise.evans.io/en/stable/django.html) middleware.
+- Optional full functionality static file server with [WhiteNoise](http://whitenoise.evans.io/en/stable/django.html) middleware.
 - PostgreSQL database support with psycopg2.
 
 Tornado:
@@ -59,6 +59,7 @@ cp example.env .env; vim .env
 
 # after change your .env file correctly
 ./manage.py migrate
+./manage.py createsuperuser
 
 # build frontend files
 npm install && npm run build

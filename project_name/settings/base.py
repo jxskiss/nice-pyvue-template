@@ -74,7 +74,6 @@ TEMPLATES = [
         'DIRS': [
             os.path.join(PROJECT_ROOT, 'templates'),
             os.path.join(PROJECT_ROOT, 'frontend', 'dist'),
-            os.path.join(PROJECT_ROOT, 'frontend', 'public'),
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -142,10 +141,8 @@ USE_TZ = True
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 STATIC_ROOT = os.path.join(PROJECT_ROOT, 'staticfiles', 'static')
 STATICFILES_DIRS = [
-    # for development convenience
+    # frontend dist static files
     os.path.join(PROJECT_ROOT, 'frontend', 'dist', 'static'),
-    # production frontend files
-    os.path.join(PROJECT_ROOT, 'frontend', 'public', 'static'),
 ]
 STATIC_URL = '/static/'
 

@@ -16,31 +16,25 @@ const OptimizeCSSPlugin = require('optimize-css-assets-webpack-plugin')
  */
 
 const buildConfigs = {
-  dev: {
+  // build or dev settings take priority over common settings
+  // see the "get" method for details
+  common: {
     assetsRoot: path.resolve(__dirname, './frontend/dist'),
     assetsSubDirectory: 'static',
-    assetsPublicPath: '/',
-    cssMinimize: false,
-    cssSourceMap: false,
-    cssExtract: true,
-    // cheap-module-eval-source-map is faster for development
-    devtool: '#cheap-module-eval-source-map',
-    extraPlugins: [
-      new webpack.HotModuleReplacementPlugin(),
-      new webpack.NoEmitOnErrorsPlugin(),
-      new FriendlyErrorsPlugin()
-    ],
-    outputFilename: (ext) => ext === 'ext' ? `[name].[ext]` : `[name].${ext}`
+    assetsPublicPath: '/'
   },
   build: {
-    assetsRoot: path.resolve(__dirname, './frontend/public'),
-    assetsSubDirectory: 'static',
-    assetsPublicPath: '/',
     cssMinimize: true,
     cssSourceMap: true,
     cssExtract: true,
     // source-map is better for debugging tools
     devtool: '#source-map',  // or false to disable source map
+    // Gzip off by default as many popular static hosts already gzip
+    // all static assets for you. Before setting to true, make sure to:
+    // `npm install --save-dev compression-webpack-plugin`
+    productionGzip: false,
+    productionGzipExtensions: ['js', 'css'],
+    // build specific plugins
     extraPlugins: [
       new webpack.optimize.UglifyJsPlugin({
         compress: {warnings: false},
@@ -52,18 +46,40 @@ const buildConfigs = {
     //   `[name].[chunkhash:8].[ext]` : `[name].[chunkhash:8].${ext}`
     outputFilename: (ext) => ext === 'ext' ? `[name].[ext]` : `[name].${ext}`
   },
+  dev: {
+    cssMinimize: false,
+    cssSourceMap: false,
+    cssExtract: true,
+    // cheap-module-eval-source-map is faster for development
+    devtool: '#cheap-module-eval-source-map',
+    port: process.env.PORT || 8080,
+    // https://webpack.github.io/docs/webpack-dev-server.html#proxy
+    proxy: {},
+    // dev specific plugins
+    extraPlugins: [
+      new webpack.HotModuleReplacementPlugin(),
+      new webpack.NoEmitOnErrorsPlugin(),
+      new FriendlyErrorsPlugin()
+    ],
+    outputFilename: (ext) => ext === 'ext' ? `[name].[ext]` : `[name].${ext}`
+  },
   get: function (_path, options = {}) {
-    let config = options.dev ? this.dev : this.build;
-    let properties = _path.split('.')
-    let value;
-    for (let idx in properties) {
-      let parent = value || config;
-      if (!parent.hasOwnProperty(properties[idx])) {
-        return null
-      } else {
-        value = parent[properties[idx]]
+    let config = process.env.NODE_ENV === 'production' ? this.build : this.dev;
+    let properties = _path.split('.');
+    let search = (root) => {
+      let value = null;
+      for (let idx in properties) {
+        let parent = value || root;
+        if (!parent.hasOwnProperty(properties[idx])) {
+          break
+        } else {
+          value = parent[properties[idx]]
+        }
       }
+      return value
     }
+    let value = search(config);
+    if (value === null) value = search(this.common);
     return value
   }
 }
@@ -207,9 +223,9 @@ module.exports = (options = {}) => {
           loader: 'vue-loader',
           options: {
             loaders: cssLoaders({
-              minimize: getConfig('cssMinimize'),
-              sourceMap: getConfig('cssSourceMap'),
-              extract: getConfig('cssExtract')
+              minimize: getConfig('cssMinimize') || false,
+              sourceMap: getConfig('cssSourceMap') || false,
+              extract: getConfig('cssExtract') || false
             })
           }
         },
@@ -241,9 +257,9 @@ module.exports = (options = {}) => {
           }
         }
       ].concat(styleLoaders({
-        minimize: getConfig('cssMinimize'),
-        sourceMap: getConfig('cssSourceMap'),
-        extract: getConfig('cssExtract')
+        minimize: getConfig('cssMinimize') || false,
+        sourceMap: getConfig('cssSourceMap') || false,
+        extract: getConfig('cssExtract') || false
       }))
     },
 
@@ -279,15 +295,16 @@ module.exports = (options = {}) => {
       ])
     ].concat(getConfig('extraPlugins') || []),
 
-    devtool: getConfig('devtool'),
+    devtool: getConfig('devtool') || '#cheap-module-eval-source-map',
 
     // development server
     devServer: {
       contentBase: resolveFrontend('dist'),
-      port: process.env.PORT || 8080,
       compress: true,
       historyApiFallback: true,
-      hot: true
+      hot: true,
+      port: buildConfigs.dev.port,
+      proxy: buildConfigs.dev.proxy
     }
   };
 
@@ -310,6 +327,32 @@ module.exports = (options = {}) => {
       }
     };
     exports.plugins.push(new HtmlWebpackPlugin(conf));
+  }
+
+  if (getConfig('productionGzip')) {
+    let extensions = getConfig('productionGzipExtensions')
+    if (extensions && extensions.length > 0) {
+      const CompressionWebpackPlugin = require('compression-webpack-plugin')
+      let conf = {
+        asset: '[path].gz[query]',
+        algorithm: 'gzip',
+        test: new RegExp(`\\.(${extensions.join('|')})$`),
+        threshold: 10240,
+        minRatio: 0.8
+      }
+      exports.plugins.push(new CompressionWebpackPlugin(conf))
+    }
+  }
+
+  /*
+   * Run the build command with an extra argument to view the bundle analyzer
+   * report after build finishes:
+   * `webpack --env.report`, or
+   * `npm run build -- --env.report`
+   */
+  if (options.report) {
+    const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
+    exports.plugins.push(new BundleAnalyzerPlugin())
   }
 
   return exports

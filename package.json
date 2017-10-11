@@ -5,12 +5,11 @@
   "author": "",
   "private": true,
   "scripts": {
-    "dev": "webpack-dev-server --env.dev",
+    "apidoc": "apidoc -o staticfiles/apidoc -f \".*\\\\.py\"",
     "clean": "rm -rf ./frontend/dist/*",
-    "watch": "npm run clean; webpack -d -w --env.dev",
-    "build": "webpack -d --env.dev",
-    "release": "webpack -p --progress",
-    "apidoc": "apidoc -o staticfiles/apidoc -f \".*\\\\.py\""
+    "dev": "NODE_ENV=development webpack-dev-server -d",
+    "watch": "NODE_ENV=development webpack -d -w",
+    "build": "npm run clean && NODE_ENV=production webpack -p --progress"
   },
   "dependencies": {
     "axios": "^0.16.1",
