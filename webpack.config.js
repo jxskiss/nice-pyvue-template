@@ -226,7 +226,13 @@ module.exports = (options = {}) => {
               minimize: getConfig('cssMinimize') || false,
               sourceMap: getConfig('cssSourceMap') || false,
               extract: getConfig('cssExtract') || false
-            })
+            }),
+            transformToRequire: {
+              video: 'src',
+              source: 'src',
+              img: 'src',
+              image: 'xlink:href'
+            }
           }
         },
         {
