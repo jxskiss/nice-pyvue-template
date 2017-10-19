@@ -108,15 +108,24 @@ npm install
 # live development server with hot reloading
 npm run dev
 
-# build for development
-npm run build
+# run with specified port
+PORT=8000 npm run dev
+# or (windows does not support command line environment variables)
+npm run dev -- --env.port=8000
 
 # build for development and watch changes
 npm run watch
 
-# build for production with minification
-npm run release
+# build for production with minification and source map
+npm run build
 
 # build api documentations written with apidoc
 npm run apidoc
+
+# the above npm run/watch/build all support specified single page
+PAGE=demoapp npm run build
+npm run build -- --env.page=demoapp
+# for index or other root pages
+PAGE=index npm run build
+npm run build -- --env.page=index
 ```

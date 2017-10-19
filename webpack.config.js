@@ -2,12 +2,12 @@
  * Created by wsh on 2017/5/9.
  */
 
-const path = require('path');
-const webpack = require('webpack');
-const glob = require('glob');
-const ExtractTextPlugin = require('extract-text-webpack-plugin');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const CopyWebpackPlugin = require('copy-webpack-plugin');
+const path = require('path')
+const webpack = require('webpack')
+const glob = require('glob')
+const ExtractTextPlugin = require('extract-text-webpack-plugin')
+const HtmlWebpackPlugin = require('html-webpack-plugin')
+const CopyWebpackPlugin = require('copy-webpack-plugin')
 const FriendlyErrorsPlugin = require('friendly-errors-webpack-plugin')
 const OptimizeCSSPlugin = require('optimize-css-assets-webpack-plugin')
 
@@ -15,73 +15,73 @@ const OptimizeCSSPlugin = require('optimize-css-assets-webpack-plugin')
  * development and production configurations
  */
 
-const buildConfigs = {
-  // build or dev settings take priority over common settings
-  // see the "get" method for details
-  common: {
-    assetsRoot: path.resolve(__dirname, './frontend/dist'),
-    assetsSubDirectory: 'static',
-    assetsPublicPath: '/'
-  },
-  build: {
-    cssMinimize: true,
-    cssSourceMap: true,
-    cssExtract: true,
-    // source-map is better for debugging tools
-    devtool: '#source-map',  // or false to disable source map
-    // Gzip off by default as many popular static hosts already gzip
-    // all static assets for you. Before setting to true, make sure to:
-    // `npm install --save-dev compression-webpack-plugin`
-    productionGzip: false,
-    productionGzipExtensions: ['js', 'css'],
-    // build specific plugins
-    extraPlugins: [
-      new webpack.optimize.UglifyJsPlugin({
-        compress: {warnings: false},
-        sourceMap: true
-      }),
-      new OptimizeCSSPlugin({cssProcessorOptions: {safe: true}})
-    ],
-    // outputFilename: (ext) => ext === 'ext' ?
-    //   `[name].[chunkhash:8].[ext]` : `[name].[chunkhash:8].${ext}`
-    outputFilename: (ext) => ext === 'ext' ? `[name].[ext]` : `[name].${ext}`
-  },
-  dev: {
-    cssMinimize: false,
-    cssSourceMap: false,
-    cssExtract: true,
-    // cheap-module-eval-source-map is faster for development
-    devtool: '#cheap-module-eval-source-map',
-    port: 8080,
-    // https://webpack.github.io/docs/webpack-dev-server.html#proxy
-    proxy: {},
-    // dev specific plugins
-    extraPlugins: [
-      new webpack.HotModuleReplacementPlugin(),
-      new webpack.NoEmitOnErrorsPlugin(),
-      new FriendlyErrorsPlugin()
-    ],
-    outputFilename: (ext) => ext === 'ext' ? `[name].[ext]` : `[name].${ext}`
-  },
-  get: function (_path, options = {}) {
-    let isProduction = options.production || process.env.NODE_ENV === 'production';
-    let config = isProduction ? this.build : this.dev;
-    let properties = _path.split('.');
-    let search = (root) => {
-      let value = null;
-      for (let idx in properties) {
-        let parent = value || root;
-        if (!parent.hasOwnProperty(properties[idx])) {
-          break
-        } else {
-          value = parent[properties[idx]]
+function makeBuildConfigs (options) {
+  return {
+    // build or dev settings take priority over common settings
+    // see the "get" method for details
+    common: {
+      assetsRoot: path.resolve(__dirname, './frontend/dist'),
+      assetsSubDirectory: 'static',
+      assetsPublicPath: '/'
+    },
+    build: {
+      cssMinimize: true,
+      cssSourceMap: true,
+      cssExtract: true,
+      // source-map is better for debugging tools
+      devtool: '#source-map',  // or false to disable source map
+      // Gzip off by default as many popular static hosts already gzip
+      // all static assets for you. Before setting to true, make sure to:
+      // `npm install --save-dev compression-webpack-plugin`
+      productionGzip: false,
+      productionGzipExtensions: ['js', 'css'],
+      // build specific plugins
+      extraPlugins: [
+        new webpack.optimize.UglifyJsPlugin({
+          compress: {warnings: false},
+          sourceMap: true
+        }),
+        new OptimizeCSSPlugin({cssProcessorOptions: {safe: true}})
+      ],
+      outputFilename: (ext) => ext === 'ext'
+        ? `[name].[chunkhash:8].[ext]` : `[name].[chunkhash:8].${ext}`
+    },
+    dev: {
+      cssMinimize: false,
+      cssSourceMap: false,
+      cssExtract: true,
+      // cheap-module-eval-source-map is faster for development
+      devtool: '#cheap-module-eval-source-map',
+      port: 8080,
+      // https://webpack.github.io/docs/webpack-dev-server.html#proxy
+      proxy: {},
+      // dev specific plugins
+      extraPlugins: [
+        new webpack.HotModuleReplacementPlugin(),
+        new webpack.NoEmitOnErrorsPlugin(),
+        new FriendlyErrorsPlugin()
+      ],
+      outputFilename: (ext) => ext === 'ext' ? `[name].[ext]` : `[name].${ext}`
+    },
+    get: function (_path, options = {}) {
+      let config = process.env.NODE_ENV === 'production' ? this.build : this.dev
+      let properties = _path.split('.')
+      let search = (root) => {
+        let value = null
+        for (let idx in properties) {
+          let parent = value || root
+          if (!parent.hasOwnProperty(properties[idx])) {
+            break
+          } else {
+            value = parent[properties[idx]]
+          }
         }
+        return value
       }
+      let value = search(config)
+      if (value === null) value = search(this.common)
       return value
     }
-    let value = search(config);
-    if (value === null) value = search(this.common);
-    return value
   }
 }
 
@@ -138,10 +138,10 @@ function cssLoaders (options) {
 
 // Generate loaders for standalone style files (outside of .vue)
 function styleLoaders (options) {
-  let output = [];
-  let loaders = cssLoaders(options);
+  let output = []
+  let loaders = cssLoaders(options)
   for (let extension in loaders) {
-    let loader = loaders[extension];
+    let loader = loaders[extension]
     output.push({
       test: new RegExp('\\.' + extension + '$'),
       use: loader
@@ -151,14 +151,25 @@ function styleLoaders (options) {
 }
 
 function getPageEntries (globPath) {
-  let entries = {}, paths, basename, pathname;
+  let targetPage = process.env.PAGE
+  let entries = {}, paths, basename, pathname, pageIndex
   glob.sync(globPath).forEach(entry => {
-    basename = path.basename(entry, path.extname(entry));
+    basename = path.basename(entry, path.extname(entry))
     // node-glob uses forward-slashes only in glob expressions, even on windows
-    paths = entry.split('/');
-    pathname = paths.slice(paths.indexOf('pages') + 1, -1).concat([basename]).join(path.sep);
-    entries[pathname] = entry;
-  });
+    paths = entry.split('/')
+    pageIndex = paths.indexOf('pages') + 1
+    if (targetPage) {  // partially build
+      if (paths.length === pageIndex + 1) {  // root pages
+        if (basename !== targetPage) {
+          return
+        }
+      } else if (paths[pageIndex] !== targetPage) {
+        return
+      }
+    }
+    pathname = paths.slice(pageIndex, -1).concat([basename]).join(path.sep)
+    entries[pathname] = entry
+  })
   return entries
 }
 
@@ -182,6 +193,16 @@ function isNodeModule (module) {
  */
 
 module.exports = (options = {}) => {
+  // --env.production
+  if (typeof options.production === 'boolean' && options.production) {
+    process.env.NODE_ENV = 'production'
+  } else {
+    process.env.NODE_ENV = 'development'
+  }
+  if (options.port) process.env.PORT = options.port  // --env.port=PORT
+  if (options.page) process.env.PAGE = options.page  // --env.page=PAGE
+
+  const buildConfigs = makeBuildConfigs(options)
   const getConfig = (_path) => buildConfigs.get(_path, options)
   const assetsPath = (_path) => path.posix.join(getConfig('assetsSubDirectory'), _path)
   const outputFilename = (ext) => getConfig('outputFilename')(ext)
@@ -311,15 +332,15 @@ module.exports = (options = {}) => {
       compress: true,
       historyApiFallback: true,
       hot: true,
-      port: options.port || process.env.PORT || buildConfigs.dev.port,
+      port: process.env.PORT || buildConfigs.dev.port,
       proxy: buildConfigs.dev.proxy
     }
-  };
+  }
 
   /*
    * build html pages, config HtmlWebpackPlugin for each page
    */
-  let pages = getPageEntries(resolveFrontend('src/pages/**/*.html'));
+  let pages = getPageEntries(resolveFrontend('src/pages/**/*.html'))
   for (let pathname in pages) {
     let conf = {
       filename: pathname + '.html',
@@ -333,8 +354,8 @@ module.exports = (options = {}) => {
         // more options:
         // https://github.com/kangax/html-minifier#options-quick-reference
       }
-    };
-    exports.plugins.push(new HtmlWebpackPlugin(conf));
+    }
+    exports.plugins.push(new HtmlWebpackPlugin(conf))
   }
 
   if (getConfig('productionGzip')) {
