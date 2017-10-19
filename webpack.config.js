@@ -2,9 +2,11 @@
  * Created by wsh on 2017/5/9.
  */
 
+const fs = require('fs')
+const glob = require('glob')
 const path = require('path')
 const webpack = require('webpack')
-const glob = require('glob')
+const merge = require('webpack-merge')
 const ExtractTextPlugin = require('extract-text-webpack-plugin')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
@@ -167,14 +169,14 @@ function getPageEntries (globPath) {
         return
       }
     }
-    pathname = paths.slice(pageIndex, -1).concat([basename]).join(path.sep)
+    pathname = paths.slice(pageIndex, -1).concat([basename]).join('/')
     entries[pathname] = entry
   })
   return entries
 }
 
-function resolveFrontend (dir) {
-  return path.join(__dirname, 'frontend', dir || '')
+function resolveFrontend (target) {
+  return path.join(__dirname, 'frontend', target || '')
 }
 
 // check whether a module is from node_modules
@@ -340,11 +342,18 @@ module.exports = (options = {}) => {
   /*
    * build html pages, config HtmlWebpackPlugin for each page
    */
-  let pages = getPageEntries(resolveFrontend('src/pages/**/*.html'))
-  for (let pathname in pages) {
+  let indexJSFiles = getPageEntries(resolveFrontend('src/pages/**/index.js'))
+  let mainJSFiles = getPageEntries(resolveFrontend('src/pages/**/main.js'))
+  for (let pathname in merge(indexJSFiles, mainJSFiles)) {
     let conf = {
       filename: pathname + '.html',
-      template: pages[pathname],
+      template: function (pn) {
+        let htmlPath = resolveFrontend(`src/pages/${pn}.html`)
+        if (fs.existsSync(htmlPath)) {
+          return htmlPath
+        }
+        return resolveFrontend('src/pages/index.html')
+      }(pathname),
       chunks: [pathname, 'vendor', 'manifest'],
       inject: true,   // inject js file
       minify: {       // minify the html file
