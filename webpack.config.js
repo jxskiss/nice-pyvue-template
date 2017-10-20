@@ -54,7 +54,7 @@ function makeBuildConfigs (options) {
       cssExtract: true,
       // cheap-module-eval-source-map is faster for development
       devtool: '#cheap-module-eval-source-map',
-      port: 8080,
+      port: process.env.PORT || 8080,
       // https://webpack.github.io/docs/webpack-dev-server.html#proxy
       proxy: {},
       // dev specific plugins
@@ -334,7 +334,7 @@ module.exports = (options = {}) => {
       compress: true,
       historyApiFallback: true,
       hot: true,
-      port: process.env.PORT || buildConfigs.dev.port,
+      port: buildConfigs.dev.port,
       proxy: buildConfigs.dev.proxy
     }
   }
@@ -346,19 +346,25 @@ module.exports = (options = {}) => {
   let mainJSFiles = getPageEntries(resolveFrontend('src/pages/**/main.js'))
   for (let pathname in merge(indexJSFiles, mainJSFiles)) {
     let conf = {
-      filename: pathname + '.html',
-      template: function (pn) {
+      filename: ((pn) => {
+        // always use index.html as output filename
+        if (pn === 'main') return 'index.html'
+        if (pn.endsWith('/main')) return `${pn.slice(0, -5)}/index.html`
+        return pn + '.html'
+      })(pathname),
+      template: ((pn) => {
+        // use root index.html as template if page html not exists
         let htmlPath = resolveFrontend(`src/pages/${pn}.html`)
         if (fs.existsSync(htmlPath)) {
           return htmlPath
         }
         return resolveFrontend('src/pages/index.html')
-      }(pathname),
+      })(pathname),
       chunks: [pathname, 'vendor', 'manifest'],
       inject: true,   // inject js file
       minify: {       // minify the html file
         removeComments: true,
-        collapseWhitespace: false,
+        collapseWhitespace: true,
         removeAttributeQuotes: true
         // more options:
         // https://github.com/kangax/html-minifier#options-quick-reference
