@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    // this aligns with Vue's browser support
+    "target": "es5",
+    // this enables stricter inference for data properties on `this`
+    "strict": true,
+    // if using webpack 2+ or rollup, to leverage tree shaking:
+    "module": "es2015",
+    "moduleResolution": "node",
+    // sourceMap, use together with webpack devtool option
+    "sourceMap": true,
+    // true to allow processing .js and .jxs files, default false
+    // NOTE: the entry file must be ts to use typescript with vue's single-file component
+    "allowJs": false
+  },
+  "include": [
+    "frontend/src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts"
+  ]
+}

@@ -211,7 +211,7 @@ module.exports = (options = {}) => {
 
   let exports = {
     context: path.resolve(__dirname),
-    entry: getPageEntries(resolveFrontend('src/pages/**/*.js')),
+    entry: getPageEntries(resolveFrontend('src/pages/**/*.[jt]s')),
     output: {
       path: getConfig('assetsRoot'),
       filename: assetsPath(`js/${outputFilename('js')}`),
@@ -220,7 +220,7 @@ module.exports = (options = {}) => {
 
     resolve: {
       modules: [resolveFrontend('src'), 'node_modules'],
-      extensions: ['.js', '.vue', '.json', '.css', '.scss', '.less'],
+      extensions: ['.js', '.ts', '.vue', '.json', '.css', '.scss', '.less'],
       alias: {
         'vue$': 'vue/dist/vue.esm.js',
         '@': resolveFrontend('src'),
@@ -258,6 +258,17 @@ module.exports = (options = {}) => {
               img: 'src',
               image: 'xlink:href'
             }
+          }
+        },
+        {
+          test: /\.tsx?$/,
+          loader: 'ts-loader',
+          include: [resolveFrontend('src'), resolveFrontend('test')],
+          options: {
+            appendTsSuffixTo: [/\.vue$/],
+            // default false to get benefits from static type checking
+            // https://www.npmjs.com/package/ts-loader#transpileonly-boolean-defaultfalse
+            transpileOnly: true
           }
         },
         {
@@ -342,9 +353,7 @@ module.exports = (options = {}) => {
   /*
    * build html pages, config HtmlWebpackPlugin for each page
    */
-  let indexJSFiles = getPageEntries(resolveFrontend('src/pages/**/index.js'))
-  let mainJSFiles = getPageEntries(resolveFrontend('src/pages/**/main.js'))
-  for (let pathname in merge(indexJSFiles, mainJSFiles)) {
+  for (let pathname in getPageEntries(resolveFrontend('src/pages/**/@(index|main).[jt]s'))) {
     let conf = {
       filename: ((pn) => {
         // always use index.html as output filename

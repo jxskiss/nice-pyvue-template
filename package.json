@@ -15,8 +15,8 @@
     "axios": "^0.16.2",
     "lodash": "^4.17.4",
     "moment": "^2.19.0",
-    "vue": "^2.4.2",
-    "vue-router": "^2.7.0"
+    "vue": "^2.5.2",
+    "vue-router": "^3.0.1"
   },
   "devDependencies": {
     "apidoc": "^0.17.6",
@@ -54,10 +54,12 @@
     "rimraf": "^2.6.0",
     "semver": "^5.3.0",
     "shelljs": "^0.7.6",
+    "ts-loader": "^3.0.5",
+    "typescript": "^2.5.3",
     "url-loader": "^0.6.2",
-    "vue-loader": "^13.2.1",
+    "vue-loader": "^13.3.0",
     "vue-style-loader": "^3.0.3",
-    "vue-template-compiler": "^2.4.4",
+    "vue-template-compiler": "^2.5.2",
     "webpack": "^3.6.0",
     "webpack-bundle-analyzer": "^2.9.0",
     "webpack-dev-middleware": "^1.12.0",
