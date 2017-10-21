@@ -6,7 +6,6 @@ const fs = require('fs')
 const glob = require('glob')
 const path = require('path')
 const webpack = require('webpack')
-const merge = require('webpack-merge')
 const ExtractTextPlugin = require('extract-text-webpack-plugin')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
@@ -266,7 +265,7 @@ module.exports = (options = {}) => {
           include: [resolveFrontend('src'), resolveFrontend('test')],
           options: {
             appendTsSuffixTo: [/\.vue$/],
-            // default false to get benefits from static type checking
+            // set to false to get benefits from static type checking
             // https://www.npmjs.com/package/ts-loader#transpileonly-boolean-defaultfalse
             transpileOnly: true
           }
@@ -356,7 +355,7 @@ module.exports = (options = {}) => {
   for (let pathname in getPageEntries(resolveFrontend('src/pages/**/@(index|main).[jt]s'))) {
     let conf = {
       filename: ((pn) => {
-        // always use index.html as output filename
+        // always use index.html as output filename for main or index entry
         if (pn === 'main') return 'index.html'
         if (pn.endsWith('/main')) return `${pn.slice(0, -5)}/index.html`
         return pn + '.html'

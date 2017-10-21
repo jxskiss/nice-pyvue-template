@@ -24,12 +24,14 @@ Tornado:
 
 Frontend:
 
-- Single file yet full functionality and very flexible webpack 2.0+ config.
-- Well designed frontend files layout.
 - Suitable for both single page application and multiple page application.
+- TypeScript support.
+- Use corresponding HTML template file for each entry if exsits, or use the root index.html.
 - `npm run dev` to start a live development server with hot reloading.
 - `npm run apidoc` to build impressive api documentation with [Apidoc](http://apidocjs.com/).
-- See package.json to find all available npm commands.
+  See "package.json" file to find all available npm scripts.
+- Well designed frontend files layout.
+- All the above features in well structured and flexible single file webpack 2.0+ config.
 
 Deployment:
 
@@ -41,7 +43,6 @@ Deployment:
 For more details, just create a project with this template and play with it!
 
 Any issues and feature requests are welcome!
-
 
 ## How to use this project template
 
@@ -77,12 +78,11 @@ npm install && npm run build
 # open your browser and browse:
 # "http://127.0.0.1:8001/tornado/hello-django" and "http://127.0.0.1:8001/admin/"
 ./server.py --port=8001 --debug
+
+# build api docs with apidocjs
+npm install
+npm run apidoc
 ```
-
-
-## Deployment instructions
-
-See `server_configs/supervisor.conf` and `server_configs/nginx.conf` for details.
 
 ### Environment variables
 
@@ -108,24 +108,58 @@ npm install
 # live development server with hot reloading
 npm run dev
 
-# run with specified port
-PORT=8000 npm run dev
-# or (windows does not support command line environment variables)
-npm run dev -- --env.port=8000
-
 # build for development and watch changes
 npm run watch
 
 # build for production with minification and source map
 npm run build
 
-# build api documentations written with apidoc
+# build api docs with apidocjs
 npm run apidoc
-
-# the above npm run/watch/build all support specified single page
-PAGE=demoapp npm run build
-npm run build -- --env.page=demoapp
-# for index or other root pages
-PAGE=index npm run build
-npm run build -- --env.page=index
 ```
+
+### Command line ENV and options
+
+Some helpful command line environment variables and options are supported.
+
+For *nix systems, use `VAR=someValue npm run script`.
+
+On Windows, cmd and powershell do not support command line environment variables,
+you need to use the command line options `npm run script -- --env.var=someValue`.
+
+```bash
+# run dev server with specified port
+PORT=8000 npm run dev
+# or
+npm run dev -- --env.port=8000
+
+# call dev/watch/build script for specified single page only
+PAGE=index npm run dev
+PAGE=demoapp npm run build
+# or
+npm run dev -- --env.page=index
+npm run build -- --env.page=demoapp
+
+# view the bundle analyzer report after build for production
+npm run build -- --env.report
+```
+
+### TypeScript support
+
+With Vue.js version 2.5+, TypeScript integration has been [greatly improved][vue-2.5-typescript].
+
+`.ts` and `.js` entries are both supported, but if you use TypeScript in
+vue single-file component (`<script lang="ts">`), the entry must be a `.ts` file,
+or the ts-loader will throw ["could not find file: *.vue" errors][ts-loader-vue-issue].
+
+If you are using VSCode, the awesome [Vetur][] extension is recommended by the Vue.js author,
+with Vetur you will get greatly improved autocompletion suggestions and even
+type hints when using plain JavaScript in Vue components!
+
+## Deployment instructions
+
+See `server_configs/supervisor.conf` and `server_configs/nginx.conf` for details.
+
+[vue-2.5-typescript]: https://medium.com/the-vue-point/upcoming-typescript-changes-in-vue-2-5-e9bd7e2ecf08
+[ts-loader-vue-issue]: https://github.com/vuejs/vue-loader/issues/109
+[Vetur]: https://github.com/vuejs/vetur
