@@ -350,7 +350,7 @@ module.exports = (options = {}) => {
   }
 
   /*
-   * build html pages, config HtmlWebpackPlugin for each page
+   * build entry pages, config HtmlWebpackPlugin for each entry
    */
   for (let pathname in getPageEntries(resolveFrontend('src/pages/**/@(index|main).[jt]s'))) {
     let conf = {
@@ -373,9 +373,30 @@ module.exports = (options = {}) => {
       minify: {       // minify the html file
         removeComments: true,
         collapseWhitespace: true,
-        removeAttributeQuotes: true
+        removeAttributeQuotes: true,
+        // necessary to consistently work with multiple chunks via CommonsChunkPlugin
+        chunksSortMode: 'dependency'
         // more options:
         // https://github.com/kangax/html-minifier#options-quick-reference
+      }
+    }
+    exports.plugins.push(new HtmlWebpackPlugin(conf))
+  }
+
+  /*
+   * build standalone html pages, config HtmlWebpackPlugin for each page
+   */
+  for (let pathname in getPageEntries(resolveFrontend('src/pages/**/!(index|main).html'))) {
+    let conf = {
+      filename: pathname + '.html',
+      template: resolveFrontend(`src/pages/${pathname}.html`),
+      chunks: [pathname, 'vendor', 'manifest'],
+      inject: true,
+      minify: {
+        removeComments: true,
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        chunksSortMode: 'dependency'
       }
     }
     exports.plugins.push(new HtmlWebpackPlugin(conf))
