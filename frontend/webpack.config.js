@@ -21,7 +21,7 @@ function makeBuildConfigs (options) {
     // build or dev settings take priority over common settings
     // see the "get" method for details
     common: {
-      assetsRoot: path.resolve(__dirname, './frontend/dist'),
+      assetsRoot: path.resolve(__dirname, './dist'),
       assetsSubDirectory: 'static',
       assetsPublicPath: '/'
     },
@@ -175,7 +175,7 @@ function getPageEntries (globPath) {
 }
 
 function resolveFrontend (target) {
-  return path.join(__dirname, 'frontend', target || '')
+  return path.join(__dirname, target || '')
 }
 
 // check whether a module is from node_modules

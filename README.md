@@ -61,7 +61,14 @@ cp example.env .env; vim .env
 ./manage.py createsuperuser
 
 # build frontend files
+cd frontend/
 npm install && npm run build
+
+# build api docs with apidocjs
+npm run apidoc
+
+# to play with django or tornado, go back to the project root
+cd ..
 
 # play with django server
 # open your browser and browse:
@@ -78,10 +85,6 @@ npm install && npm run build
 # open your browser and browse:
 # "http://127.0.0.1:8001/tornado/hello-django" and "http://127.0.0.1:8001/admin/"
 ./server.py --port=8001 --debug
-
-# build api docs with apidocjs
-npm install
-npm run apidoc
 ```
 
 ### Environment variables
@@ -102,6 +105,8 @@ export DJANGO_SECRET_KEY=
 ## Frontend build Instructions
 
 ```bash
+cd frontend/
+
 # install dependencies
 npm install
 

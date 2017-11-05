@@ -5,8 +5,8 @@
   "author": "",
   "private": true,
   "scripts": {
-    "apidoc": "apidoc -o staticfiles/apidoc -f \".*\\\\.py\"",
-    "clean": "rm -rf ./frontend/dist/*",
+    "apidoc": "apidoc -i ../ -o ../staticfiles/apidoc -f .*\\.py",
+    "clean": "rm -rf ./dist/*",
     "dev": "webpack-dev-server -d",
     "watch": "webpack -d -w",
     "build": "npm run clean && webpack -p --progress --env.production"
