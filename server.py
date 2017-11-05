@@ -2,14 +2,6 @@
 # -*- coding:utf-8 -*-
 
 import os
-import sys
-
-for _lib_dir in ('libs', 'apps'):
-    _lib_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), _lib_dir)
-    if os.path.exists(_lib_path) and _lib_path not in sys.path:
-        sys.path.insert(0, _lib_path)
-del _lib_dir, _lib_path
-
 from importlib import import_module
 from tornado import ioloop, web, wsgi
 from tornado.options import options, define, parse_command_line

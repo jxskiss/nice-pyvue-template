@@ -17,13 +17,6 @@ import dj_email_url
 DJANGO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = os.path.dirname(DJANGO_ROOT)
 
-# add sub directories to system path
-for _lib_dir in ('libs', 'apps'):
-    _lib_path = os.path.join(PROJECT_ROOT, _lib_dir)
-    if _lib_path not in sys.path:
-        sys.path.insert(0, _lib_path)
-del _lib_dir, _lib_path
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
@@ -49,7 +42,7 @@ DJANGO_APPS = [
 ]
 
 LOCAL_APPS = [
-    'demoapp',
+    'apps.demoapp',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
