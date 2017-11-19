@@ -7,7 +7,7 @@ A very nice web project template featured Django, Tornado and Vue.js 2.0+, webpa
 Django:
 
 - Django 1.11
-- Load environment variables from `.env` with [django-dotenv](https://github.com/jpadilla/django-dotenv).
+- Load environment variables from `.env` file.
 - Config database and email settings using [dj_database_url](https://github.com/kennethreitz/dj-database-url) and [dj_email_url](https://github.com/migonzalvar/dj-email-url).
 - Simple single settings.py file, which can be easily extended to use multiple files.
 - Layout django apps under apps subdirectory, with `manage.py startapp` command patched.

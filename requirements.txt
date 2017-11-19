@@ -1,7 +1,6 @@
 django
 dj_database_url
 dj_email_url
-django-dotenv
 tornado
 whitenoise
 psycopg2

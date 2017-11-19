@@ -42,6 +42,7 @@ DJANGO_APPS = [
 ]
 
 LOCAL_APPS = [
+    'apps.common',
     'apps.demoapp',
 ]
 
@@ -100,16 +101,20 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME': 'django.contrib.auth.password_validation.'
+                'UserAttributeSimilarityValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME': 'django.contrib.auth.password_validation.'
+                'MinimumLengthValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME': 'django.contrib.auth.password_validation.'
+                'CommonPasswordValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME': 'django.contrib.auth.password_validation.'
+                'NumericPasswordValidator',
     },
 ]
 
@@ -133,25 +138,26 @@ USE_TZ = True
 # https://warehouse.python.org/project/whitenoise/
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 STATIC_ROOT = os.path.join(PROJECT_ROOT, 'staticfiles', 'static')
-STATICFILES_DIRS = [
-    # frontend dist static files
-    os.path.join(PROJECT_ROOT, 'frontend', 'dist', 'static'),
-]
 STATIC_URL = '/static/'
+STATICFILES_DIRS = []
+# frontend dist static files
+_fe_dist_static = os.path.join(PROJECT_ROOT, 'frontend', 'dist', 'static')
+if os.path.exists(_fe_dist_static):
+    STATICFILES_DIRS.append(_fe_dist_static)
 
 
 # Logging
-log_level_or = lambda level: os.getenv('DJANGO_LOG_LEVEL', level)
+_env_log_level = os.getenv('DJANGO_LOG_LEVEL')
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
         'tornado': {
-            'format': '[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d] %(message)s',
+            'format': '[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d] %(message)s',  # noqa
             'datefmt': '%y%m%d %H:%M:%S',
         },
         'verbose': {
-            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s',
+            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s',  # noqa
         },
         'simple': {
             'format': '%(levelname)s %(message)s',
@@ -167,20 +173,20 @@ LOGGING = {
     },
     'handlers': {
         'console_stdout': {
-            'level': log_level_or('INFO'),
+            'level': _env_log_level or 'INFO',
             'filters': ['require_debug_true'],
             'class': 'logging.StreamHandler',
             'stream': sys.stdout,
             'formatter': 'tornado',
         },
         'console_debug': {
-            'level': log_level_or('DEBUG'),
+            'level': _env_log_level or 'DEBUG',
             'filters': ['require_debug_true'],
             'class': 'logging.StreamHandler',
             'formatter': 'tornado',
         },
         'console_deploy': {
-            'level': log_level_or('INFO'),
+            'level': _env_log_level or 'INFO',
             'filters': ['require_debug_false'],
             'class': 'logging.StreamHandler',
             'formatter': 'tornado',
@@ -192,31 +198,32 @@ LOGGING = {
             'formatter': 'verbose',
         }
     },
+    # NOTE:
+    #   1. the root logger is only enabled for console handler in debug mode
+    #   2. the messages sent to 'django', 'py.warnings' and other loggers will
+    # be propagated to the root logger, propagation is default behaviour
+    # setup root logger to capture all messages from any logger,
+    # eg: foreign libraries
     'loggers': {
-        # NOTE:
-        #   1. the root logger is only enabled for console handler in debug mode
-        #   2. the messages sent to 'django', 'py.warnings' and other loggers
-        #      will be propagated to the root logger, propagation is default behaviour
-        # setup root logger to capture all messages from any logger, eg: foreign libraries
         '': {
             'handlers': ['console_debug'],
-            'level': log_level_or('WARNING'),
+            'level': _env_log_level or 'WARNING',
         },
         'py.warnings': {
             'handlers': ['console_deploy'],
         },
         'django': {
             'handlers': ['console_deploy', 'mail_admins'],
-            'level': log_level_or('INFO'),
+            'level': _env_log_level or 'INFO',
         },
         'tornado': {
             'handlers': ['console_deploy', 'mail_admins'],
-            'level': log_level_or('INFO')
+            'level': _env_log_level or 'INFO',
         },
         # write access log to stdout only and only in debug mode
         'tornado.access': {
             'handlers': ['console_stdout'],
-            'level': log_level_or('INFO'),
+            'level': _env_log_level or 'INFO',
             'propagate': False
         }
     }

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import os
 import sys
-import dotenv
+from utils import dotenv
 
 
 def main():

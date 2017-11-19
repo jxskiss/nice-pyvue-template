@@ -14,7 +14,8 @@ define('django', type=bool, default=False, help='enable django integration')
 define('port', type=int, default=8000, help='listening port')
 define('addr', type=str, default='0.0.0.0', help='listening address')
 
-# DJANGO_SETTINGS_MODULE MUST be available before import any django related things
+# DJANGO_SETTINGS_MODULE MUST be available before importing any django
+# related things
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "{{ project_name }}.settings")
 dj_settings = None
 
@@ -23,7 +24,7 @@ def main():
     global dj_settings
 
     # load environment variables from .env file
-    import dotenv
+    from utils import dotenv
     dotenv.read_dotenv()
 
     parse_command_line()
@@ -34,8 +35,9 @@ def main():
 
     if options.django:
         if not options.debug:
-            gen_log.warn('WARNING: it is STRONGLY DISCOURAGED to use tornado and django '
-                         'within one process (one thread) in production!!!')
+            gen_log.warn(
+                'WARNING: it is STRONGLY DISCOURAGED to use tornado and '
+                'django within one process (one thread) in production!!!')
 
         import django
         import django.conf
@@ -58,7 +60,8 @@ def main():
 
         # serve django admin pages and static files in debug mode
         import django.core.wsgi
-        django_wsgi = wsgi.WSGIContainer(django.core.wsgi.get_wsgi_application())
+        django_wsgi = wsgi.WSGIContainer(
+            django.core.wsgi.get_wsgi_application())
         django_handlers = [
             (r'^/admin/.*$', web.FallbackHandler, dict(fallback=django_wsgi)),
             (r'^/static/.*$', web.FallbackHandler, dict(fallback=django_wsgi)),
@@ -70,7 +73,8 @@ def main():
     app = web.Application(
         handlers=handlers,
         debug=options.debug,
-        cookie_secret=(dj_settings and dj_settings.SECRET_KEY) or '{{ secret_key }}',
+        cookie_secret=(dj_settings and dj_settings.SECRET_KEY) or
+                      '{{ secret_key }}',
         django_enabled=options.django,
         dj_settings=dj_settings,
         template_path='templates',
