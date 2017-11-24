@@ -1,4 +1,4 @@
-# Copied from Django REST Framework.
+# Copied and borrowed from Django REST Framework.
 """
 Handled exceptions raised by API requests.
 
@@ -10,10 +10,12 @@ from __future__ import unicode_literals
 import functools
 import json
 import math
+import traceback
 
+from django.conf import settings
 from django.core.exceptions import PermissionDenied as dj_PermissionDenied
 from django.http.request import QueryDict
-from django.http.response import JsonResponse, Http404
+from django.http.response import HttpResponseBase, JsonResponse, Http404
 from django.utils import six
 from django.utils.encoding import force_text
 from django.utils.translation import ugettext_lazy as _
@@ -43,20 +45,53 @@ def _handle_exception(exc, context=None):
         return JsonResponse({
             'code': NotFound.default_code,
             'message': NotFound.default_detail
-        }, status=status.HTTP_404_NOT_FOUND)
+        }, status=NotFound.status_code)
     elif isinstance(exc, dj_PermissionDenied):
         return JsonResponse({
             'code': PermissionDenied.default_code,
             'message': PermissionDenied.default_detail
-        }, status=status.HTTP_403_FORBIDDEN)
+        }, status=PermissionDenied.status_code)
+    elif settings.DEBUG:
+        return JsonResponse({
+            'code': 'error_with_traceback',
+            'message': _('Error with traceback.'),
+            'traceback': traceback.format_exc()
+        }, status=APIException.status_code)
     else:
         return JsonResponse({
             'code': APIException.default_code,
             'message': APIException.default_detail
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        }, status=APIException.status_code)
 
 
-def ajax_login_required(view_func):
+def _parse_request_body(request):
+    """
+    Parse data and cache as JSON or QUERY_DICT attribute for request for
+    convenience and better performance.
+    """
+    if not request.body:
+        return
+
+    if 'application/json' in request.META['CONTENT_TYPE']:
+        if isinstance(request.body, six.string_types):
+            data = json.loads(request.body)
+        else:
+            data = json.loads(request.body.decode('utf-8'))
+        # cache json data to request for better performance
+        request.JSON = data
+    elif (request.META['CONTENT_TYPE'] ==
+            'application/x-www-form-urlencoded'):
+        if request.method == 'POST':
+            query_dict = request.POST
+        else:
+            query_dict = QueryDict(request.body)
+        # cache query dict to request for better performance
+        request.QUERY_DICT = query_dict
+    else:
+        pass
+
+
+def api_login_required(view_func):
     @functools.wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated():
@@ -69,8 +104,8 @@ def ajax_login_required(view_func):
     return wrapper
 
 
-def ajax_staff_member_required(view_func):
-    @ajax_login_required
+def api_staff_member_required(view_func):
+    @api_login_required
     @functools.wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not request.user.is_staff:
@@ -83,8 +118,10 @@ def ajax_staff_member_required(view_func):
     return wrapper
 
 
-def api_view(methods=('GET', 'POST'), login_required=False,
-             staff_member_required=False):
+def api_view(view_func=None,
+             methods=('GET', 'POST'), parse_body=False,
+             login_required=False, staff_member_required=False,
+             **response_kwargs):
 
     def decorator(func):
         @functools.wraps(func)
@@ -93,63 +130,59 @@ def api_view(methods=('GET', 'POST'), login_required=False,
                 if request.method not in methods:
                     raise MethodNotAllowed(request.method)
 
+                # parse and cache QUERY_DICT or JSON data for request
+                if parse_body:
+                    _parse_request_body(request)
+
                 result = func(request, *args, **kwargs)
-                if result and type(result) != dict:
+                if result and isinstance(result, HttpResponseBase):
                     return result
 
-                response = {'code': 'ok', 'message': 'Ok.'}
-                response.update(result or {})
-                status_code = 200
-                if response.get('status'):
-                    status_code = response.pop('status')
-                return JsonResponse(response, status=status_code)
+                response = {'code': 'ok', 'data': result}
+                return JsonResponse(response, **response_kwargs)
             except Exception as exc:
                 return _handle_exception(exc)
 
         if staff_member_required:
-            wrapper = ajax_staff_member_required(wrapper)
+            wrapper = api_staff_member_required(wrapper)
         elif login_required:
-            wrapper = ajax_login_required(wrapper)
+            wrapper = api_login_required(wrapper)
         return wrapper
+
+    if view_func:
+        return decorator(view_func)
 
     return decorator
 
 
-def api_token_required(validator, token_field='token'):
-    """Use together with the api_view decorator."""
+def api_token_required(validator,
+                       header='HTTP_AUTHORIZATION',
+                       token_field='token',
+                       view_methods=('GET', 'POST'),
+                       exclude_methods=('HEAD', 'OPTION')):
+    """
+    Require API token provided, either through header or request parameters.
+    """
 
     def decorator(view_func):
+        @api_view(methods=view_methods, parse_body=True)
         @functools.wraps(view_func)
         def wrapper(request, *args, **kwargs):
-            if request.method in ('HEAD', 'OPTION'):
+            if exclude_methods and request.method in exclude_methods:
                 return view_func(request, *args, **kwargs)
 
             token = None
-            if request.method == 'GET':
+            # header take precedence over parameters
+            if header and header in request.META:
+                token = request.META[header]
+
+            elif request.method == 'GET':
                 token = request.GET.get(token_field)
-            elif (request.META['CONTENT_TYPE'] ==
-                    'application/x-www-form-urlencoded'):
-                if request.method == 'POST':
-                    query_dict = request.POST
-                else:
-                    query_dict = QueryDict(request.body)
-                token = query_dict.get(token_field)
-                # cache query dict to request for better performance
-                request.QUERY_DICT = query_dict
-            elif request.META['CONTENT_TYPE'] == 'application/json':
-                try:
-                    if isinstance(request.body, six.string_types):
-                        data = json.loads(request.body)
-                    else:
-                        data = json.loads(request.body.decode('utf-8'))
-                    token = data.get(token_field, None)
-                    # cache json data to request for better performance
-                    request.JSON = data
-                except Exception as err:
-                    raise ParseError('Invalid JSON data.')
             else:
-                # how can we arrive here?
-                pass
+                if hasattr(request, 'QUERY_DICT'):
+                    token = request.QUERY_DICT.get('token')
+                elif hasattr(request, 'JSON'):
+                    token = request.JSON.get('token')
 
             if not token:
                 raise NotAuthenticated()
@@ -225,11 +258,13 @@ class APIException(Exception):
     default_detail = _('A server error occurred.')
     default_code = 'error'
 
-    def __init__(self, detail=None, code=None):
+    def __init__(self, detail=None, code=None, status=None):
         if detail is None:
             detail = self.default_detail
         if code is None:
             code = self.default_code
+        if status:
+            self.status_code = status
 
         self.detail = _get_error_details(detail, code)
 
