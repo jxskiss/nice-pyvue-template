@@ -40,7 +40,11 @@ def _handle_exception(exc, context=None):
                 'message': 'Error with detail.',
                 'detail': exc.detail
             }
-        return JsonResponse(data, status=exc.status_code, headers=headers)
+        response = JsonResponse(data, status=exc.status_code)
+        if headers:
+            for k, v in headers.items():
+                response[k] = v
+        return response
     elif isinstance(exc, Http404):
         return JsonResponse({
             'code': NotFound.default_code,
