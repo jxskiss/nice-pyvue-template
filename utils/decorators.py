@@ -2,23 +2,31 @@
 """
 Some useful and frequently used decorators, references:
     1. https://wiki.python.org/moin/PythonDecoratorLibrary
-    2. https://github.com/pydanny/cached-property/blob/master/cached_property.py
-    3. https://github.com/bottlepy/bottle/blob/master/bottle.py
-"""  # noqa
+    2. https://github.com/pydanny/cached-property/
+    3. https://github.com/bottlepy/bottle/
+"""
 import functools
+import hashlib
 import inspect
 import itertools
+import json
 import logging
 import math
+import os
 import sys
 import threading
 import time
 import traceback
 import warnings
 
-try:
+PY2 = False
+PY3 = True
+if sys.version_info.major == 2:
+    PY2, PY3 = True, False
+
+if PY2:
     import Queue as queue
-except ImportError:
+else:
     import queue
 
 
@@ -73,7 +81,7 @@ class cached_property(object):
 
         del instance._cache[<property name>]
 
-    """  # noqa
+    """
     def __init__(self, func=None, ttl=0, name=None, doc=None):
         self.ttl = ttl
         self.lock = threading.RLock()
@@ -91,7 +99,7 @@ class cached_property(object):
         self.__module__ = func.__module__
         return self
 
-    def __get__(self, inst, owner):
+    def __get__(self, inst, cls=None):
         if inst is None:
             return self
 
@@ -141,8 +149,8 @@ class dict_property(object):
         del getattr(obj, self.attr)[self.key]
 
 
-def retry_on_exc(tries, delay=3, backoff=2,
-                 exceptions=(Exception,), hook=None):
+def retry_on_error(tries, delay=3, backoff=2,
+                   exceptions=(Exception,), hook=None):
     """Function decorator implementing retrying logic.
 
     Copyright 2012 by Jeff Laughlin Consulting LLC.
@@ -362,7 +370,7 @@ class _LogDecorator(object):
         raise NotImplementedError()
 
 
-class log_args(_LogDecorator):
+class log_parameters(_LogDecorator):
     """
     Dumps out the arguments passed to a function before calling it.
     """
@@ -613,3 +621,76 @@ def lazy_thunkify(func):
         return thunk
 
     return lazy_thunked
+
+
+@singleton
+class _Mock(object):
+    """
+    Return mock data from json file or default value when the decorated
+    function raise NotImplementError exception.
+
+    This class is a singleton for better cache strategy and performance.
+
+    Usage example:
+
+        my_mock = functools.partial(mock.from_file,
+                                    file='/some/file.json', ttl=300)
+
+        class MyClass(object):
+
+            # provided there is key value "myclass_foo": "some value"
+            # in the json file
+            @my_mock(key='myclass_foo')
+            def foo(*args, **kwargs):
+                raise NotImplementedError()
+
+            @my_mock(default={'foo': 'bar'})
+            def bar(*args, **kwargs):
+                raise my_mock.PleaseMockMe()
+
+    """
+
+    class PleaseMockMe(Exception):
+        pass
+
+    def from_file(self, key=None, file=None, ttl=3600, default=None,
+                  exceptions=(NotImplementedError, PleaseMockMe)):
+        if default is None and not file:
+            caller_dir = os.path.dirname(inspect.stack()[1][1])
+            guess_files = [
+                os.path.join(caller_dir, 'mock_data.json'),
+                os.path.join(caller_dir, 'mock.json'),
+            ]
+            for gf in guess_files:
+                if os.path.exists(gf):
+                    file = gf
+        if file:
+            file = os.path.normpath(os.path.abspath(file))
+            if not os.path.exists(file):
+                raise IOError('mock file "%s" does not exists' % file)
+
+            b_fn = file.encode('utf-8') if PY3 else file
+            attr_name = '_cache_{}'.format(hashlib.md5(b_fn).hexdigest())
+            setattr(self.__class__, attr_name, cached_property(
+                lambda obj: json.load(open(file)), ttl=ttl))
+
+        def deco(func):
+            @functools.wraps(func)
+            def wrapper(*args, **kwargs):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as err:
+                    if key and file:
+                        return getattr(self, attr_name)[key]
+                    if callable(default):
+                        return default()
+                    return default
+
+            return wrapper
+
+        return deco
+
+    __call__ = from_file
+
+
+mock = _Mock()
