@@ -8,11 +8,11 @@ import json
 
 
 class AbstractKVStore(models.Model):
-    k = models.CharField("Key", max_length=255, unique=True)
-    v = models.TextField('Value', null=True)
+    k = models.CharField('Key', max_length=255, unique=True)
+    v = models.TextField('Value', default='', blank=True)
     create_at = models.DateTimeField('Create at', auto_now_add=True)
     update_at = models.DateTimeField('Update at', auto_now=True)
-    expire_at = models.DateTimeField('Expire at', null=True)
+    expire_at = models.DateTimeField('Expire at', null=True, blank=True)
 
     class Meta:
         abstract = True
@@ -34,9 +34,9 @@ class AbstractKVStore(models.Model):
     def get_json(cls, key, default=None):
         try:
             obj = cls.objects.get(k=key)
-            if obj.expire_at < timezone.now():
-                return json.loads(obj.v)
-            return default
+            if obj.expire_at and obj.expire_at < timezone.now():
+                return default
+            return json.loads(obj.v)
         except cls.DoesNotExist:
             return default
 

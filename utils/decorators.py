@@ -16,31 +16,10 @@ import os
 import sys
 import threading
 import time
-import traceback
 import warnings
 
-PY2 = False
-PY3 = True
-if sys.version_info.major == 2:
-    PY2, PY3 = True, False
-
-if PY2:
-    import Queue as queue
-else:
-    import queue
-
-
-class lazy_attribute(object):
-    """A property that caches itself to the class object."""
-
-    def __init__(self, func):
-        functools.update_wrapper(self, func, updated=[])
-        self.getter = func
-
-    def __get__(self, obj, cls):
-        value = self.getter(cls)
-        setattr(cls, self.__name__, value)
-        return value
+from six import b, u, reraise
+from six.moves import queue
 
 
 class cached_property(object):
@@ -99,24 +78,37 @@ class cached_property(object):
         self.__module__ = func.__module__
         return self
 
-    def __get__(self, inst, cls=None):
-        if inst is None:
+    def __get__(self, obj, cls=None):
+        if obj is None:
             return self
 
         now = time.time()
         with self.lock:
             try:
-                value, last_updated = inst._cache[self.__name__]
+                value, last_updated = obj._cache[self.__name__]
                 if 0 < self.ttl < now - last_updated:
                     raise AttributeError
             except (KeyError, AttributeError):
-                value = self.func(inst)
+                value = self.func(obj)
                 try:
-                    cache = inst._cache
+                    cache = obj._cache
                 except AttributeError:
-                    cache = inst._cache = {}
+                    cache = obj._cache = {}
                 cache[self.__name__] = (value, now)
             return value
+
+
+class lazy_attribute(object):
+    """A property that caches itself to the class object."""
+
+    def __init__(self, func):
+        functools.update_wrapper(self, func, updated=[])
+        self.getter = func
+
+    def __get__(self, inst, cls):
+        value = self.getter(cls)
+        setattr(cls, self.__name__, value)
+        return value
 
 
 class dict_property(object):
@@ -188,27 +180,26 @@ def retry_on_error(tries, delay=3, backoff=2,
     if delay <= 0:
         raise ValueError("delay must be greater than 0")
 
-    def deco_retry(f):
-        @functools.wraps(f)
-        def f_retry(*args, **kwargs):
-            my_delay = delay
-            the_tries = list(range(tries))
-            the_tries.reverse()
-            for tries_remaining in the_tries:
+    def deco(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            m_delay = delay
+            m_tries = list(reversed(range(tries)))
+            for tries_remaining in m_tries:
                 try:
-                    return f(*args, **kwargs)
+                    return func(*args, **kwargs)
                 except exceptions as err:
                     if tries_remaining > 0:
                         if hook is not None:
-                            hook(tries_remaining, err, my_delay)
-                        time.sleep(my_delay)
-                        my_delay = my_delay * backoff
+                            hook(tries_remaining, err, m_delay)
+                        time.sleep(m_delay)
+                        m_delay = m_delay * backoff
                     else:
                         raise
 
-        return f_retry
+        return wrapper
 
-    return deco_retry
+    return deco
 
 
 def retry_on_false(tries, delay=3, backoff=2):
@@ -231,27 +222,27 @@ def retry_on_false(tries, delay=3, backoff=2):
     if delay <= 0:
         raise ValueError("delay must be greater than 0")
 
-    def deco_retry(f):
-        @functools.wraps(f)
-        def f_retry(*args, **kwargs):
-            m_tries, m_delay = tries, delay  # make mutable
+    def deco(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            m_tries, m_delay = tries, delay
 
-            rv = f(*args, **kwargs)  # first attempt
+            rv = func(*args, **kwargs)
             while m_tries > 0:
-                if rv is True:  # Done on success
+                if rv is True:
                     return True
 
-                m_tries -= 1  # consume an attempt
-                time.sleep(m_delay)  # wait...
-                m_delay *= backoff  # make future wait longer
+                m_tries -= 1
+                time.sleep(m_delay)
+                m_delay *= backoff
 
-                rv = f(*args, **kwargs)  # Try again
+                rv = func(*args, **kwargs)
 
-            return False  # Ran out of tries :-(
+            return False
 
-        return f_retry  # true decorator -> decorated function
+        return wrapper
 
-    return deco_retry  # @retry(arg[, ...]) -> true decorator
+    return deco
 
 
 def deprecated(func=None, msg=None):
@@ -274,7 +265,7 @@ def deprecated(func=None, msg=None):
     def deco(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            message = msg or "Function {} is deprecated.".format(func.__name__)
+            message = msg or "Function {} is deprecated.".format(f.__name__)
             warnings.warn(message, category=DeprecationWarning, stacklevel=2)
             return func(*args, **kwargs)
 
@@ -292,18 +283,17 @@ def unimplemented(func=None, defaultval=None):
     specifying a default argument as an argument to the decorator (or you
     can leave it off to specify None to be returned).
     """
-    if func is None:
-        def unimp_wrapper(f):
-            @functools.wraps(f)
-            def wrapper(*args, **kwargs):
-                return defaultval
+    def deco(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            return defaultval
 
-            return wrapper
+        return wrapper
 
-        return unimp_wrapper
+    if func is not None:
+        return deco(func)
 
-    else:
-        return lambda *args, **kwargs: defaultval
+    return deco
 
 
 def enabled(func):
@@ -336,20 +326,20 @@ def disabled(func):
 
 class _LogDecorator(object):
 
-    _DEFAULT_LEVEL = logging.DEBUG
-    _DEFAULT_FORMAT = '[%(levelname)1.1s %(asctime)s %(name)s] %(message)s'  # noqa
-    _DEFAULT_DATE_FORMAT = '%y%m%d %H:%M:%S'
+    DEFAULT_LEVEL = logging.DEBUG
+    DEFAULT_FORMAT = '[%(levelname)1.1s %(asctime)s %(name)s] %(message)s'
+    DEFAULT_DATE_FORMAT = '%y%m%d %H:%M:%S'
 
-    logger_name = '_logDecorator'
+    logger_name = 'LogDecorator'
 
     def __new__(cls, func=None,
                 logger=None, level=None, logger_name=None, propagate=True):
         self = object.__new__(cls)
 
         # Do basic configuration for the logging system if not already
-        logging.basicConfig(level=cls._DEFAULT_LEVEL,
-                            format=cls._DEFAULT_FORMAT,
-                            datefmt=cls._DEFAULT_DATE_FORMAT)
+        logging.basicConfig(level=cls.DEFAULT_LEVEL,
+                            format=cls.DEFAULT_FORMAT,
+                            datefmt=cls.DEFAULT_DATE_FORMAT)
         self.level = level or (logger and logger.level) or logging.root.level
         if logger is None:
             self.logger_name = logger_name or cls.logger_name
@@ -371,6 +361,7 @@ class _LogDecorator(object):
 
         if func is not None:
             return self.__call__(func)
+
         return self
 
     def __call__(self, func):
@@ -405,18 +396,20 @@ class log_events(_LogDecorator):
     leaving events with a specific logger.
     """
 
-    ENTRY_MESSAGE = 'Entering %s'
-    EXIT_MESSAGE = 'Exiting %s'
-
     def __call__(self, func):
         f_name = func.__name__
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            self.logger.log(self.level, self.ENTRY_MESSAGE, f_name)
-            f_result = func(*args, **kwargs)
-            self.logger.log(self.level, self.EXIT_MESSAGE, f_name)
-            return f_result
+            self.logger.log(self.level, 'Entering %s', f_name)
+            try:
+                f_result = func(*args, **kwargs)
+            except Exception as err:
+                self.logger.log(self.level, 'Exception in %s', f_name)
+                raise
+            else:
+                self.logger.log(self.level, 'Exiting %s', f_name)
+                return f_result
 
         return wrapper
 
@@ -518,134 +511,80 @@ class asynchronous(object):
             time.sleep(1)
 
             if result.is_done():
-                print("result {0}".format(result.get_result()))
+                print("result {0}".format(result.result()))
 
         result2 = long_process.start(13)
 
         try:
-            print("result2 {0}".format(result2.get_result()))
-        except asynchronous.NotYetDoneException as ex:
-            print ex.message
+            print("result2 {0}".format(result2.result()))
+        except asynchronous.NotYetDoneException:
+            print "not ready"
+
+        result3 = long_process.start(5)
+        print("result3 {0}".format(result3.wait())
 
     """
     def __init__(self, func):
         self.func = func
+        self.err, self.exc_info = False, None
 
         def threaded(*args, **kwargs):
-            self.queue.put(self.func(*args, **kwargs))
+            try:
+                self.queue.put(self.func(*args, **kwargs))
+            except Exception as err:
+                self.err = True
+                self.exc_info = sys.exc_info()
+            finally:
+                self.wait_event.set()
 
         self.threaded = threaded
 
     def __call__(self, *args, **kwargs):
         return self.func(*args, **kwargs)
 
+    @log_events
     def start(self, *args, **kwargs):
         self.queue = queue.Queue()
-        thread = threading.Thread(
+        self.wait_event = threading.Event()
+        self.thread = threading.Thread(
             target=self.threaded, args=args, kwargs=kwargs)
-        thread.start()
-        return asynchronous.Result(self.queue, thread)
+        self.thread.start()
+        return asynchronous.Result(self)
 
     class NotYetDoneException(Exception):
-        def __init__(self, message):
-            self.message = message
+        pass
 
     class Result(object):
-        def __init__(self, queue, thread):
-            self.queue = queue
-            self.thread = thread
-            self.result = None
+        def __init__(self, refer):
+            self.refer = refer
+            self._is_done = False
 
+        @log_events
         def is_done(self):
-            return not self.thread.is_alive()
+            if not self._is_done:
+                if self.refer.queue.empty():
+                    if self.refer.thread.is_alive():
+                        return False
+            self._is_done = True
+            return True
 
-        def get_result(self):
+        @log_events
+        def result(self):
             if not self.is_done():
-                raise asynchronous.NotYetDoneException(
-                    'the call has not yet completed its task')
+                raise asynchronous.NotYetDoneException()
+            if self.refer.err:
+                exc_info = self.refer.exc_info
+                reraise(exc_info[0], exc_info[1], exc_info[2])
 
-            if not hasattr(self, 'result'):
-                self.result = self.queue.get()
+            # cache the result, or deadlock happens when you retrieve
+            # the result more than once
+            if not hasattr(self, '_result'):
+                setattr(self, '_result', self.refer.queue.get())
+            return self._result
 
-            return self.result
-
-
-def lazy_thunkify(func):
-    """Make a function immediately return a function of no args which, when
-    called, waits for the result, which will start being processed in another
-    thread.
-
-    This decorator will cause any function to, instead of running its code,
-    start a thread to run the code, returning a thunk (function with no args)
-    that wait for the function's completion and returns the value (or raises
-    the exception).
-
-    Useful if you have Computation A that takes x seconds and then uses
-    Computation B, which takes y seconds. Instead of x+y seconds you only
-    need max(x,y) seconds.
-
-    Example:
-
-        @lazy_thunkify
-        def slow_double(i):
-            print "Multiplying..."
-            time.sleep(5)
-            print "Done multiplying!"
-            return i*2
-
-
-        def maybe_multiply(x):
-            double_thunk = slow_double(x)
-            print "Thinking..."
-            time.sleep(3)
-            time.sleep(3)
-            time.sleep(1)
-            if x == 3:
-                print "Using it!"
-                res = double_thunk()
-            else:
-                print "Not using it."
-                res = None
-            return res
-
-        # both take 7 seconds
-        maybe_multiply(10)
-        maybe_multiply(3)
-    """
-
-    @functools.wraps(func)
-    def lazy_thunked(*args, **kwargs):
-        wait_event = threading.Event()
-
-        result = [None]
-        exc = [False, None]
-
-        def worker_func():
-            try:
-                func_result = func(*args, **kwargs)
-                result[0] = func_result
-            except Exception as err:
-                exc[0] = True
-                exc[1] = sys.exc_info()
-                print("Lazy thunk has thrown an exception (will be raised "
-                      "on thunk()):\n%s" % (traceback.format_exc()))
-            finally:
-                wait_event.set()
-
-        def thunk():
-            wait_event.wait()
-            if exc[0]:
-                # raise exc[1][0], exc[1][1], exc[1][2]
-                # raise exc[1][1] from None
-                raise exc[1][1]
-
-            return result[0]
-
-        threading.Thread(target=worker_func).start()
-
-        return thunk
-
-    return lazy_thunked
+        def wait(self):
+            self.refer.wait_event.wait()
+            return self.result()
 
 
 @singleton
@@ -689,13 +628,13 @@ class _Mock(object):
             for gf in guess_files:
                 if os.path.exists(gf):
                     file = gf
+                    break
         if file:
             file = os.path.normpath(os.path.abspath(file))
             if not os.path.exists(file):
                 raise IOError('mock file "%s" does not exists' % file)
 
-            b_fn = file.encode('utf-8') if PY3 else file
-            attr_name = '_cache_{}'.format(hashlib.md5(b_fn).hexdigest())
+            attr_name = 'from_file_{}'.format(hashlib.md5(b(file)).hexdigest())
             setattr(self.__class__, attr_name, cached_property(
                 lambda obj: json.load(open(file)), ttl=ttl))
 

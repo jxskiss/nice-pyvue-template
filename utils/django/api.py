@@ -9,6 +9,7 @@ from __future__ import unicode_literals
 
 import functools
 import json
+import logging
 import math
 import traceback
 
@@ -22,6 +23,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils.translation import ungettext
 
 from .. import http_status as status
+
+_logger = logging.getLogger(__name__)
 
 
 def _handle_exception(exc, context=None):
@@ -77,10 +80,13 @@ def _parse_request_body(request):
         return
 
     if 'application/json' in request.META['CONTENT_TYPE']:
-        if isinstance(request.body, six.string_types):
-            data = json.loads(request.body)
-        else:
-            data = json.loads(request.body.decode('utf-8'))
+        try:
+            if isinstance(request.body, six.string_types):
+                data = json.loads(request.body)
+            else:
+                data = json.loads(request.body.decode('utf-8'))
+        except Exception as exc:
+            six.raise_from(ValidationError('Invalid JSON body.'), exc)
         # cache json data to request for better performance
         request.JSON = data
     elif (request.META['CONTENT_TYPE'] ==
@@ -95,33 +101,6 @@ def _parse_request_body(request):
         pass
 
 
-def api_login_required(view_func):
-    @functools.wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        if not request.user.is_authenticated():
-            return JsonResponse({
-                'code': NotAuthenticated.default_code,
-                'message': NotAuthenticated.default_detail
-            }, status=status.HTTP_401_UNAUTHORIZED)
-        return view_func(request, *args, **kwargs)
-
-    return wrapper
-
-
-def api_staff_member_required(view_func):
-    @api_login_required
-    @functools.wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        if not request.user.is_staff:
-            return JsonResponse({
-                'code': PermissionDenied.default_code,
-                'message': PermissionDenied.default_detail
-            }, status=status.HTTP_403_FORBIDDEN)
-        return view_func(request, *args, **kwargs)
-
-    return wrapper
-
-
 def api_view(view_func=None,
              methods=('GET', 'POST'), parse_body=False,
              login_required=False, staff_member_required=False,
@@ -131,6 +110,13 @@ def api_view(view_func=None,
         @functools.wraps(func)
         def wrapper(request, *args, **kwargs):
             try:
+                if login_required or staff_member_required:
+                    if not request.user.is_authenticated():
+                        raise NotAuthenticated()
+                if staff_member_required:
+                    if not request.user.is_staff:
+                        raise PermissionDenied()
+
                 if request.method not in methods:
                     raise MethodNotAllowed(request.method)
 
@@ -145,12 +131,9 @@ def api_view(view_func=None,
                 response = {'code': 'ok', 'data': result}
                 return JsonResponse(response, **response_kwargs)
             except Exception as exc:
+                _logger.warning(exc, exc_info=True)
                 return _handle_exception(exc)
 
-        if staff_member_required:
-            wrapper = api_staff_member_required(wrapper)
-        elif login_required:
-            wrapper = api_login_required(wrapper)
         return wrapper
 
     if view_func:
@@ -162,14 +145,15 @@ def api_view(view_func=None,
 def api_token_required(validator,
                        header='HTTP_AUTHORIZATION',
                        token_field='token',
-                       view_methods=('GET', 'POST'),
-                       exclude_methods=('HEAD', 'OPTION')):
+                       methods=('GET', 'POST'),
+                       exclude_methods=('HEAD', 'OPTION'),
+                       **response_kwargs):
     """
     Require API token provided, either through header or request parameters.
     """
 
     def decorator(view_func):
-        @api_view(methods=view_methods, parse_body=True)
+        @api_view(methods=methods, parse_body=True, **response_kwargs)
         @functools.wraps(view_func)
         def wrapper(request, *args, **kwargs):
             if exclude_methods and request.method in exclude_methods:
@@ -179,7 +163,6 @@ def api_token_required(validator,
             # header take precedence over parameters
             if header and header in request.META:
                 token = request.META[header]
-
             elif request.method == 'GET':
                 token = request.GET.get(token_field)
             else:
