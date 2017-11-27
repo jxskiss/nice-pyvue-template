@@ -336,13 +336,20 @@ def disabled(func):
 
 class _LogDecorator(object):
 
+    _DEFAULT_LEVEL = logging.DEBUG
+    _DEFAULT_FORMAT = '[%(levelname)1.1s %(asctime)s %(name)s] %(message)s'  # noqa
+    _DEFAULT_DATE_FORMAT = '%y%m%d %H:%M:%S'
+
     logger_name = '_logDecorator'
 
     def __new__(cls, func=None,
                 logger=None, level=None, logger_name=None, propagate=True):
         self = object.__new__(cls)
 
-        logging.basicConfig(level=logging.DEBUG)
+        # Do basic configuration for the logging system if not already
+        logging.basicConfig(level=cls._DEFAULT_LEVEL,
+                            format=cls._DEFAULT_FORMAT,
+                            datefmt=cls._DEFAULT_DATE_FORMAT)
         self.level = level or (logger and logger.level) or logging.root.level
         if logger is None:
             self.logger_name = logger_name or cls.logger_name
@@ -373,6 +380,9 @@ class _LogDecorator(object):
 class log_parameters(_LogDecorator):
     """
     Dumps out the arguments passed to a function before calling it.
+
+    NOTE: other decorators must be defined upper this decorator,
+          or it won't work.
     """
     def __call__(self, func):
         arg_names = inspect.getargspec(func).args
@@ -425,16 +435,31 @@ class print_to_log(_LogDecorator):
             try:
                 return func(*args, **kwargs)
             finally:
+                self.flush()
                 sys.stdout = stdout_bak
 
         return wrapper
 
-    def write(self, buf):
-        for line in buf.rstrip().splitlines():
-            self.logger.log(self.level, line.rstrip())
+    @property
+    def buf(self):
+        if not hasattr(self, '_buf'):
+            setattr(self, '_buf', [])
+        return self._buf
+
+    @buf.setter
+    def buf(self, buf):
+        setattr(self, '_buf', buf)
+
+    def write(self, text):
+        self.buf.append(text)
+        if text.endswith('\n'):
+            self.flush()
 
     def flush(self):
-        pass
+        output = ''.join(self.buf).rstrip()
+        if output:
+            self.logger.log(self.level, output)
+            self.buf = []
 
 
 def singleton(cls):
