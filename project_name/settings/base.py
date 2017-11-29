@@ -186,7 +186,7 @@ LOGGING = {
             'formatter': 'tornado',
         },
         'console_deploy': {
-            'level': _env_log_level or 'INFO',
+            'level': _env_log_level or 'WARNING',
             'filters': ['require_debug_false'],
             'class': 'logging.StreamHandler',
             'formatter': 'tornado',
@@ -199,25 +199,22 @@ LOGGING = {
         }
     },
     # NOTE:
-    #   1. the root logger is only enabled for console handler in debug mode
+    #   1. the root logger will be filtered differently according debug mode
     #   2. the messages sent to 'django', 'py.warnings' and other loggers will
-    # be propagated to the root logger, propagation is default behaviour
+    #      be propagated to the root logger, propagation is default behaviour
     # setup root logger to capture all messages from any logger,
     # eg: foreign libraries
     'loggers': {
         '': {
-            'handlers': ['console_debug'],
-            'level': _env_log_level or 'WARNING',
-        },
-        'py.warnings': {
-            'handlers': ['console_deploy'],
+            'handlers': ['console_debug', 'console_deploy'],
+            'level': _env_log_level or 'DEBUG',
         },
         'django': {
-            'handlers': ['console_deploy', 'mail_admins'],
+            'handlers': ['mail_admins'],
             'level': _env_log_level or 'INFO',
         },
         'tornado': {
-            'handlers': ['console_deploy', 'mail_admins'],
+            'handlers': ['mail_admins'],
             'level': _env_log_level or 'INFO',
         },
         # write access log to stdout only and only in debug mode
