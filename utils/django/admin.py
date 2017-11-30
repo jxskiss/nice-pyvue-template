@@ -4,12 +4,25 @@ from django.utils import timezone
 import json
 
 __all__ = [
+    'DropdownFilter', 'DropdownRelatedFilter', 'DropdownChoicesFilter',
     'create_modeladmin',
     'make_related_field', 'make_json_field',
     'LastWeekDateFilter', 'make_last_week_date_filter',
     'IsNullOrNotFilter', 'make_isnull_or_not_filter',
     'FKUserFilter', 'make_fk_user_filter',
 ]
+
+
+class DropdownFilter(admin.AllValuesFieldListFilter):
+    template = 'common/admin/dropdown_filter.html'
+
+
+class DropdownRelatedFilter(admin.RelatedFieldListFilter):
+    template = 'common/admin/dropdown_filter.html'
+
+
+class DropdownChoicesFilter(admin.ChoicesFieldListFilter):
+    template = 'common/admin/dropdown_filter.html'
 
 
 def create_modeladmin(model, model_admin, name=None,
