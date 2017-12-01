@@ -25,10 +25,96 @@ if PY2:
     from io import open
 
 
+class cached_attribute(object):
+    """
+    Thread safe decorator for read-only class attribute evaluated only
+    once within TTL period.
+
+    The default time-to-live (TTL) is 0 which is never expire, which
+    will result the class attribute be replaced by the value when first
+    accessed. Set to positive number to enable TTL.
+
+    Usage example:
+
+        import random
+
+        # the class containing the attribute must be a new-style class
+        class MyClass(object):
+
+            # create class attribute whose value will only be evaluated
+            # every 60 seconds, at maximum.
+            @cached_attribute(ttl=60)
+            def randint(cls):
+                return random.randint(0, 100)
+
+            # create class attribute whose value will only be evaluated
+            # once, using all default parameters
+            @cached_attribute
+            def rand_float(cls):
+                return random.random()
+
+    By default the value is cached in the '_attr_cache_' attribute of the
+    class that has the attribute getter method wrapped by this decorator.
+    The cache attribute value is a dictionary which has a key for every
+    attribute of the class which is wrapped by this decorator. Each entry
+    in the cache is created only when the property is accessed for the
+    first time and is a two-element tuple with the last computed attribute
+    value and the last time it was updated in seconds since the epoch.
+
+    The cache dictionary attribute can be specified using the 'cache_attr'
+    parameter of the decorator constructor.
+
+    To expire a cached attribute value with positive TTL manually just do:
+
+        del class._attr_cache_[<attribute name>]
+
+    """
+
+    def __init__(self, func=None, ttl=0, cache_attr='_attr_cache_'):
+        self.cache_attr = cache_attr
+        self.ttl = ttl
+        self.lock = threading.RLock()
+
+        if func is not None:
+            self.__call__(func)
+
+    def __call__(self, func):
+        functools.update_wrapper(self, func, updated=[])
+        self.func = func
+        return self
+
+    def __get__(self, obj, cls):
+        if self.ttl <= 0:
+            value = self.func(cls)
+            setattr(cls, self.__name__, value)
+            return value
+
+        now = time.time()
+        with self.lock:
+            try:
+                value, last_updated = getattr(
+                    cls, self.cache_attr)[self.__name__]
+                if self.ttl < now - last_updated:
+                    raise AttributeError
+            except (KeyError, AttributeError):
+                value = self.func(cls)
+                try:
+                    cache = getattr(cls, self.cache_attr)
+                except AttributeError:
+                    cache = {}
+                    setattr(cls, self.cache_attr, cache)
+                cache[self.__name__] = (value, now)
+            return value
+
+
 class cached_property(object):
     """
-    Decorator for read-only properties evaluated only once within TTL period,
-    it is thread safe.
+    Thread safe decorator for readonly properties evaluated only once
+    within TTL period.
+
+    The default time-to-live (TTL) is 0 which is never expire, which
+    will result the property be replaced by the value when first accessed.
+    Set to positive number to enable TTL.
 
     It can be used to create a cached property like this:
 
@@ -40,78 +126,67 @@ class cached_property(object):
             # create property whose value is cached for ten minutes
             @cached_property(ttl=600)
             def randint(self):
-                # will only be evaluated every 10 min. at maximum.
+                # will only be evaluated every 10 min, at maximum.
                 return random.randint(0, 100)
 
-            # use all default arguments, never expired
+            # use all default parameters, never expired
             @cached_property
-            def random(self):
+            def rand_float(self):
                 return random.random()
 
-    The value is cached in the '_cache' attribute of the object instance
-    that has the property getter method wrapped by this decorator. The
-    '_cache' attribute value is a dictionary which has a key for every
-    property of the object which is wrapped by this decorator. Each entry
-    in the cache is created only when the property is accessed for the
-    first time and is a two-element tuple with the last computed property
-    value and the last time it was updated in seconds since the epoch.
+    By default the value is cached in the '_prop_cache_' attribute of the
+    object instance that has the property getter method wrapped by this
+    decorator. The cache attribute value is a dictionary which has a key
+    for every property of the object which is wrapped by this decorator.
+    Each entry in the cache is created only when the property is accessed
+    for the first time and is a two-element tuple with the last computed
+    property value and the last time it was updated in seconds since the epoch.
 
-    The default time-to-live (TTL) is 0 which is never expire. Set to
-    positive number to enable TTL.
+    The cache dictionary attribute can be specified using the 'cache_attr'
+    parameter of the decorator constructor.
 
-    To expire a cached property value manually just do:
+    To expire a cached property value with positive TTL manually just do:
 
-        del instance._cache[<property name>]
+        del instance._prop_cache_[<property name>]
 
     """
-    def __init__(self, func=None, ttl=0, name=None, doc=None):
+    def __init__(self, func=None, ttl=0, cache_attr='_prop_cache_'):
+        self.cache_attr = cache_attr
         self.ttl = ttl
         self.lock = threading.RLock()
-        self.__name__, self.__doc__ = name, doc
 
         if func is not None:
             self.__call__(func)
 
     def __call__(self, func):
+        functools.update_wrapper(self, func)
         self.func = func
-        if not self.__doc__:
-            self.__doc__ = func.__doc__
-        if not self.__name__:
-            self.__name__ = func.__name__
-        self.__module__ = func.__module__
         return self
 
     def __get__(self, obj, cls=None):
         if obj is None:
             return self
 
+        if self.ttl <= 0:
+            value = obj.__dict__[self.__name__] = self.func(obj)
+            return value
+
         now = time.time()
         with self.lock:
             try:
-                value, last_updated = obj._cache[self.__name__]
-                if 0 < self.ttl < now - last_updated:
+                value, last_updated = getattr(
+                    obj, self.cache_attr)[self.__name__]
+                if self.ttl < now - last_updated:
                     raise AttributeError
             except (KeyError, AttributeError):
                 value = self.func(obj)
                 try:
-                    cache = obj._cache
+                    cache = getattr(obj, self.cache_attr)
                 except AttributeError:
-                    cache = obj._cache = {}
+                    cache = {}
+                    setattr(obj, self.cache_attr, cache)
                 cache[self.__name__] = (value, now)
             return value
-
-
-class lazy_attribute(object):
-    """A property that caches itself to the class object."""
-
-    def __init__(self, func):
-        functools.update_wrapper(self, func, updated=[])
-        self.getter = func
-
-    def __get__(self, inst, cls):
-        value = self.getter(cls)
-        setattr(cls, self.__name__, value)
-        return value
 
 
 class dict_property(object):
@@ -135,12 +210,12 @@ class dict_property(object):
 
     def __set__(self, obj, value):
         if self.read_only:
-            raise AttributeError("Read-Only property.")
+            raise AttributeError("Readonly property.")
         getattr(obj, self.attr)[self.key] = value
 
     def __delete__(self, obj):
         if self.read_only:
-            raise AttributeError("Read-Only property.")
+            raise AttributeError("Readonly property.")
         del getattr(obj, self.attr)[self.key]
 
 
@@ -268,7 +343,7 @@ def deprecated(func=None, msg=None):
     def deco(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            message = msg or "Function {} is deprecated.".format(f.__name__)
+            message = msg or "Function {} is deprecated.".format(func.__name__)
             warnings.warn(message, category=DeprecationWarning, stacklevel=2)
             return func(*args, **kwargs)
 
@@ -528,6 +603,7 @@ class asynchronous(object):
 
     """
     def __init__(self, func):
+        functools.update_wrapper(self, func)
         self.func = func
         self.err, self.exc_info = False, None
 
@@ -545,7 +621,6 @@ class asynchronous(object):
     def __call__(self, *args, **kwargs):
         return self.func(*args, **kwargs)
 
-    @log_events
     def start(self, *args, **kwargs):
         self.queue = queue.Queue()
         self.wait_event = threading.Event()
@@ -562,7 +637,6 @@ class asynchronous(object):
             self.refer = refer
             self._is_done = False
 
-        @log_events
         def is_done(self):
             if not self._is_done:
                 if self.refer.queue.empty():
@@ -571,7 +645,6 @@ class asynchronous(object):
             self._is_done = True
             return True
 
-        @log_events
         def result(self):
             if not self.is_done():
                 raise asynchronous.NotYetDoneException()
@@ -657,6 +730,7 @@ class _Mock(object):
 
         return deco
 
+    # shortcut to allow using the mock decorator without parameters
     __call__ = from_file
 
 
