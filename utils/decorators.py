@@ -18,8 +18,11 @@ import threading
 import time
 import warnings
 
-from six import b, u, reraise
+from six import PY2, PY3, b, u, reraise
 from six.moves import queue
+
+if PY2:
+    from io import open
 
 
 class cached_property(object):
@@ -636,7 +639,7 @@ class _Mock(object):
 
             attr_name = 'from_file_{}'.format(hashlib.md5(b(file)).hexdigest())
             setattr(self.__class__, attr_name, cached_property(
-                lambda obj: json.load(open(file)), ttl=ttl))
+                lambda obj: json.load(open(file, encoding='utf8')), ttl=ttl))
 
         def deco(func):
             @functools.wraps(func)
