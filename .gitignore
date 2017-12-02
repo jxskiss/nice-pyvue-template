@@ -9,9 +9,9 @@
 env/
 *.py[cod]
 
-# django environment variables
+# dotenv files
 .env
-.django_env
+.tornado_env
 
 # media files and generated static files
 staticfiles/**

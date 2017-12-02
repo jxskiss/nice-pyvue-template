@@ -1,7 +1,4 @@
-django
+aioredis
+asyncpg
 tornado
-whitenoise
-psycopg2
-gunicorn
-gevent
 click
