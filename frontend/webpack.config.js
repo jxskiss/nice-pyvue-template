@@ -6,6 +6,7 @@ const fs = require('fs')
 const glob = require('glob')
 const path = require('path')
 const webpack = require('webpack')
+const merge = require('webpack-merge')
 const ExtractTextPlugin = require('extract-text-webpack-plugin')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
@@ -15,6 +16,9 @@ const OptimizeCSSPlugin = require('optimize-css-assets-webpack-plugin')
 /*
  * development and production configurations
  */
+
+// sub directory of src for multiple pages application
+const pagesDir = 'pages'
 
 function makeBuildConfigs (options) {
   return {
@@ -44,13 +48,15 @@ function makeBuildConfigs (options) {
         }),
         new OptimizeCSSPlugin({cssProcessorOptions: {safe: true}})
       ],
-      outputFilename: (ext) => ext === 'ext'
-        ? `[name].[chunkhash:8].[ext]` : `[name].[chunkhash:8].${ext}`
+      outputFilename: (ext, hash) => {
+        hash = hash || 'hash'
+        return `[name].[${hash}:8].${ext === 'ext' ? '[ext]' : ext}`
+      }
     },
     dev: {
       cssMinimize: false,
       cssSourceMap: false,
-      cssExtract: true,
+      cssExtract: false,
       // cheap-module-eval-source-map is faster for development
       devtool: '#cheap-module-eval-source-map',
       port: process.env.PORT || 8080,
@@ -62,7 +68,7 @@ function makeBuildConfigs (options) {
         new webpack.NoEmitOnErrorsPlugin(),
         new FriendlyErrorsPlugin()
       ],
-      outputFilename: (ext) => ext === 'ext' ? `[name].[ext]` : `[name].${ext}`
+      outputFilename: (ext, hash) => `[name].${ext === 'ext' ? '[ext]' : ext}`,
     },
     get: function (_path, options = {}) {
       let config = process.env.NODE_ENV === 'production' ? this.build : this.dev
@@ -93,7 +99,7 @@ function makeBuildConfigs (options) {
 function cssLoaders (options) {
   options = options || {}
 
-  let cssLoader = {
+  const cssLoader = {
     loader: 'css-loader',
     options: {
       minimize: options.minimize,
@@ -101,9 +107,16 @@ function cssLoaders (options) {
     }
   }
 
+  const postcssLoader = {
+    loader: 'postcss-loader',
+    options: {
+      sourceMap: options.sourceMap
+    }
+  }
+
   // generate loader string to be used with extract text plugin
   function generateLoaders (loader, loaderOptions) {
-    let loaders = [cssLoader]
+    const loaders = options.usePostCSS ? [cssLoader, postcssLoader] : [cssLoader]
     if (loader) {
       loaders.push({
         loader: loader + '-loader',
@@ -131,7 +144,7 @@ function cssLoaders (options) {
     postcss: generateLoaders(),
     less: generateLoaders('less'),
     sass: generateLoaders('sass', {indentedSyntax: true}),
-    scss: generateLoaders('scss'),
+    scss: generateLoaders('sass'),
     stylus: generateLoaders('stylus'),
     styl: generateLoaders('stylus')
   }
@@ -158,7 +171,13 @@ function getPageEntries (globPath) {
     basename = path.basename(entry, path.extname(entry))
     // node-glob uses forward-slashes only in glob expressions, even on windows
     paths = entry.split('/')
-    pageIndex = paths.indexOf('pages') + 1
+    if (paths.indexOf(pagesDir) > 0) {
+      // entry under pages directory
+      pageIndex = paths.indexOf(pagesDir) + 1
+    } else {
+      // main entry under src directory
+      pageIndex = paths.indexOf('src') + 1
+    }
     if (targetPage) {  // partially build
       if (paths.length === pageIndex + 1) {  // root pages
         if (basename !== targetPage) {
@@ -210,23 +229,20 @@ module.exports = (options = {}) => {
 
   let exports = {
     context: path.resolve(__dirname),
-    entry: getPageEntries(resolveFrontend('src/pages/**/*.[jt]s')),
+    entry: merge(getPageEntries(resolveFrontend('src/@(main|index).[jt]s')),
+      getPageEntries(resolveFrontend(`src/${pagesDir}/**/*.[jt]s`))),
     output: {
       path: getConfig('assetsRoot'),
-      filename: assetsPath(`js/${outputFilename('js')}`),
+      filename: assetsPath(`js/${outputFilename('js', 'chunkhash')}`),
       publicPath: getConfig('assetsPublicPath')
     },
 
     resolve: {
       modules: [resolveFrontend('src'), 'node_modules'],
-      extensions: ['.js', '.ts', '.vue', '.json', '.css', '.scss', '.less'],
+      extensions: ['.js', '.ts', '.vue', '.json', '.css', '.less', '.sass', '.scss', '.styl'],
       alias: {
         'vue$': 'vue/dist/vue.esm.js',
-        '@': resolveFrontend('src'),
-        'assets': resolveFrontend('src/assets'),
-        'components': resolveFrontend('src/components'),
-        'plugins': resolveFrontend('src/plugins'),
-        'utils': resolveFrontend('src/utils')
+        '@': resolveFrontend('src')
       }
     },
 
@@ -247,12 +263,13 @@ module.exports = (options = {}) => {
           loader: 'vue-loader',
           options: {
             loaders: cssLoaders({
+              // usePostCSS: true,
               minimize: getConfig('cssMinimize') || false,
               sourceMap: getConfig('cssSourceMap') || false,
               extract: getConfig('cssExtract') || false
             }),
             transformToRequire: {
-              video: 'src',
+              video: ['src', 'poster'],
               source: 'src',
               img: 'src',
               image: 'xlink:href'
@@ -287,6 +304,14 @@ module.exports = (options = {}) => {
             limit: 10000,
             name: assetsPath(`img/${outputFilename('ext')}`)
             // a lot of other options
+          }
+        },
+        {
+          test: /\.(mp4|webm|ogg|mp3|wav|flac|aac)(\?.*)?$/,
+          loader: 'url-loader',
+          options: {
+            limit: 10000,
+            name: assetsPath(`media/${outputFilename('ext')}`)
           }
         },
         {
@@ -352,7 +377,8 @@ module.exports = (options = {}) => {
   /*
    * build entry pages, config HtmlWebpackPlugin for each entry
    */
-  for (let pathname in getPageEntries(resolveFrontend('src/pages/**/@(index|main).[jt]s'))) {
+  for (let pathname in merge(getPageEntries(resolveFrontend('src/@(index|main).[jt]s')),
+    getPageEntries(resolveFrontend(`src/${pagesDir}/**/@(index|main).[jt]s`)))) {
     let conf = {
       filename: ((pn) => {
         // always use index.html as output filename for main or index entry
@@ -362,11 +388,19 @@ module.exports = (options = {}) => {
       })(pathname),
       template: ((pn) => {
         // use root index.html as template if page html not exists
-        let htmlPath = resolveFrontend(`src/pages/${pn}.html`)
+        let htmlPath = resolveFrontend(`src/${pagesDir}/${pn}.html`)
         if (fs.existsSync(htmlPath)) {
           return htmlPath
+        } else {
+          let indexPath = resolveFrontend(`src/${pagesDir}/index.html`)
+          if (!fs.existsSync(indexPath)) {
+            indexPath = resolveFrontend('src/index.html')
+            if (!fs.existsSync(indexPath)) {
+              indexPath = resolveFrontend('index.html')
+            }
+          }
+          return indexPath
         }
-        return resolveFrontend('src/pages/index.html')
       })(pathname),
       chunks: [pathname, 'vendor', 'manifest'],
       inject: true,   // inject js file
@@ -386,11 +420,12 @@ module.exports = (options = {}) => {
   /*
    * build standalone html pages, config HtmlWebpackPlugin for each page
    */
-  for (let pathname in getPageEntries(resolveFrontend('src/pages/**/!(index|main).html'))) {
+  for (let pathname in getPageEntries(resolveFrontend(`src/${pagesDir}/**/!(index|main).html`))) {
+    let hasEntry = exports.entry.hasOwnProperty(pathname)
     let conf = {
       filename: pathname + '.html',
-      template: resolveFrontend(`src/pages/${pathname}.html`),
-      chunks: [pathname, 'vendor', 'manifest'],
+      template: resolveFrontend(`src/${pagesDir}/${pathname}.html`),
+      chunks: hasEntry ? [pathname, 'vendor', 'manifest'] : [],
       inject: true,
       minify: {
         removeComments: true,
@@ -428,5 +463,7 @@ module.exports = (options = {}) => {
     exports.plugins.push(new BundleAnalyzerPlugin())
   }
 
+  RegExp.prototype.toJSON = RegExp.prototype.toString;
+  fs.writeFileSync('webpack.config.log.json', JSON.stringify(exports, null, 2))
   return exports
 }
