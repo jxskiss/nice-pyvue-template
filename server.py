@@ -16,8 +16,20 @@ define('addr', type=str, default='0.0.0.0', help='listening address')
 def main():
     # load environment variables from .env file
     dotenv.read_dotenv(dotenv.find_dotenv())
-
     parse_command_line()
+
+    use_uvloop = False
+    if options.uvloop:
+        from tornado.platform.asyncio import AsyncIOMainLoop
+        try:
+            import asyncio
+            import uvloop
+            asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+            AsyncIOMainLoop().install()
+            use_uvloop = True
+        except ImportError:
+            gen_log.error(
+                'cannot import asyncio and uvloop, fallback to IOLoop')
 
     from handlers import handlers
 
@@ -44,12 +56,7 @@ def main():
                  options.addr, options.port, serving_mode)
     app.listen(options.port, options.addr)
 
-    if options.uvloop:
-        from tornado.platform.asyncio import AsyncIOMainLoop
-        import asyncio
-        import uvloop
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-        AsyncIOMainLoop().install()
+    if use_uvloop:
         asyncio.get_event_loop().run_forever()
     else:
         ioloop.IOLoop.instance().start()
