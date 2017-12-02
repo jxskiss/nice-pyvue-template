@@ -41,12 +41,6 @@ def pre_action():
             proj_name = pn
     inputs['project_name'] = proj_name
 
-    if os.path.exists(proj_name):
-        if os.listdir(proj_name):
-            raise SystemExit('Error: directory %s already exists and not empty.')
-    else:
-        os.mkdir(proj_name)
-
     variables['project_name'] = proj_name
     variables['project_name_title'] = proj_name.replace('_', ' ').title()
     variables['project_directory'] = os.path.normpath(
@@ -64,11 +58,11 @@ def post_action():
 
 def render_templates():
     patterns = {
-        'project_name': re.compile(r'{{\s*project_name\s*}}'),
+        'project_name': re.compile(r'\{\{\s*project_name\s*\}\}'),
         'project_name_title': re.compile(
-            r'{{\s*project_name\s*\|\s*title\s*}}'),
-        'project_directory': re.compile(r'{{\s*project_directory\s*}}'),
-        'secret_key': re.compile(r'{{\s*secret_key\s*}}')
+            r'\{\{\s*project_name\s*\|\s*title\s*\}\}'),
+        'project_directory': re.compile(r'\{\{\s*project_directory\s*\}\}'),
+        'secret_key': re.compile(r'\{\{\s*secret_key\s*\}\}')
     }
 
     def walk(path):
@@ -106,6 +100,13 @@ def main():
     pre_action()
 
     if target == 'tornado':
+        if os.path.exists(inputs['project_name']):
+            if os.listdir(inputs['project_name']):
+                raise SystemExit(
+                    'Error: directory %s already exists and not empty.')
+        else:
+            os.mkdir(inputs['project_name'])
+
         url = BASE_URL + '/tornado.zip'
         tmp_fn = tempfile.mktemp()
         try:

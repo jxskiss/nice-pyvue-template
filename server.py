@@ -9,7 +9,7 @@ from tornado.log import gen_log
 from utils import dotenv
 
 define('debug', type=bool, default=False, help='run server in debug mode',
-       callback=lambda debug: os.environ.update({'DJANGO_DEBUG': str(debug)}))
+       callback=lambda debug: os.environ.update({'DEBUG': str(debug)}))
 define('uvloop', type=bool, default=True, help='run server with uvloop')
 define('django', type=bool, default=False, help='enable django integration')
 define('port', type=int, default=8000, help='listening port')
@@ -70,8 +70,6 @@ def main():
                 path='staticfiles/apidoc', default_filename='index.html')),
             (r'^/media/(.+)$', web.StaticFileHandler, dict(
                 path='staticfiles/media')),
-            (r'^/static/(.+)$', web.StaticFileHandler, dict(
-                path='staticfiles/static')),
         ]
 
         # serve django admin pages and static files in debug mode
@@ -80,6 +78,7 @@ def main():
             django.core.wsgi.get_wsgi_application())
         django_handlers = [
             (r'^/admin/.*$', web.FallbackHandler, dict(fallback=django_wsgi)),
+            (r'^/static/.*$', web.FallbackHandler, dict(fallback=django_wsgi)),
             # fallback any not matched request to django
             (r'^/.*$', web.FallbackHandler, dict(fallback=django_wsgi))
         ]
