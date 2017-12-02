@@ -1,5 +1,4 @@
 django
-tornado
 whitenoise
 psycopg2
 gunicorn

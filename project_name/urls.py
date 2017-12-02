@@ -24,9 +24,6 @@ urlpatterns = [
 
     # vue helloworld demo
     url(r'^$', generic.TemplateView.as_view(template_name='index.html')),
-
-    # demo django app with vue frontend pages
-    url(r'^demo/', include('apps.demoapp.urls'))
 ]
 
 # serve apidoc and other static files in debug mode

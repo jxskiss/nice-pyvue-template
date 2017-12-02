@@ -10,7 +10,6 @@ https://docs.djangoproject.com/en/{{ docs_version }}/ref/settings/
 
 import sys
 import os
-
 from utils.confurl import parse_db_url, parse_email_url
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -43,7 +42,6 @@ DJANGO_APPS = [
 
 LOCAL_APPS = [
     'apps.common',
-    'apps.demoapp',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
@@ -213,16 +211,6 @@ LOGGING = {
             'handlers': ['mail_admins'],
             'level': _env_log_level or 'INFO',
         },
-        'tornado': {
-            'handlers': ['mail_admins'],
-            'level': _env_log_level or 'INFO',
-        },
-        # write access log to stdout only and only in debug mode
-        'tornado.access': {
-            'handlers': ['console_stdout'],
-            'level': _env_log_level or 'INFO',
-            'propagate': False
-        }
     }
 }
 

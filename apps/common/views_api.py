@@ -5,6 +5,7 @@ from django.contrib.auth import (
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 import utils.django.api as api_util
+import utils.exceptions as api_exc
 
 
 @ensure_csrf_cookie
@@ -12,7 +13,7 @@ import utils.django.api as api_util
 def login_check(request):
     if not request.user.is_anonymous:
         return {'username': request.user.username}
-    raise api_util.NotAuthenticated
+    raise api_exc.NotAuthenticated()
 
 
 @api_util.api_view(methods=('POST',), parse_body=True)
@@ -24,12 +25,12 @@ def login_ajax(request):
     username = data.get('username')
     password = data.get('password')
     if not all((username, password)):
-        raise api_util.ValidationError(
+        raise api_exc.ValidationError(
             'Invalid username or password parameters.')
 
     user = authenticate(request, username=username, password=password)
     if not user:
-        raise api_util.AuthenticationFailed()
+        raise api_exc.AuthenticationFailed()
 
     auth_login(request, user)
     return {'username': user.username}
