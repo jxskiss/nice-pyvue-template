@@ -48,15 +48,66 @@ Any issues and feature requests are welcome!
 ### The django template
 
 ```bash
-# don't forget to fill your envionment variables
+django-admin.py startproject \
+    --template https://github.com/jxskiss/nice-pyvue-template/archive/master.zip \
+    --extension=.py,.json,.js,.md,.conf,.env \
+    project_name
+cd project_name
+pip install -r requirements.txt
 cp example.env .env; vim .env
 
+# after modify your .env file correctly
 ./manage.py migrate
 ./manage.py createsuperuser
 
 # build frontend files
 cd frontend/
 npm install && npm run build
+
+# play with django server
+# open with your browser: "http://127.0.0.0:8000/", "http://127.0.0.1:8000/admin/"
+cd ..
+./manage.py runserver 0.0.0.0:8000
+```
+
+### The tornado template
+
+```bash
+TARGET=tornado PROJECT_NAME=project_name python -c "$(
+    curl -fsSL https://raw.githubusercontent.com/jxskiss/nice-pyvue-template/hobgoblin/install.py )"
+cd project_name
+pip install -r requirements.txt
+cp example.env .env; vim .env
+
+# build frontend files
+cd frontend/
+npm install && npm run build
+
+# paly with tornado server
+# open with your browser: "http://127.0.0.1:8080/"
+cd ../
+./server.py --port=8000
+```
+
+### Hobgoblin: tornado & django integrated with demo
+
+```bash
+TARGET=hobgoblin PROJECT_NAME=project_name python -c "$(
+    curl -fsSL https://raw.githubusercontent.com/jxskiss/nice-pyvue-template/hobgoblin/install.py )"
+cd project_name
+pip install -r requirements.txt
+cp example.env .env; vim .env
+
+# after change your .env file correctly
+./manage.py migrate
+./manage.py createsuperuser
+
+# build frontend files
+cd frontend/
+npm install && npm run build
+
+# to play with django or tornado, go back to the project root
+cd ..
 
 # play with django server
 # open your browser and browse:
