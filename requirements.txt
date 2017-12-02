@@ -1,6 +1,4 @@
 django
-dj_database_url
-dj_email_url
 tornado
 whitenoise
 psycopg2

@@ -10,8 +10,8 @@ https://docs.djangoproject.com/en/{{ docs_version }}/ref/settings/
 
 import sys
 import os
-import dj_database_url
-import dj_email_url
+
+from utils.confurl import parse_db_url, parse_email_url
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 DJANGO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -92,7 +92,7 @@ LOGIN_URL = '/admin/login/'
 SECRET_DATABASE_URL = os.getenv('DJANGO_DATABASE_URL', '')
 
 DATABASES = {
-    'default': dj_database_url.parse(SECRET_DATABASE_URL),
+    'default': parse_db_url('django', SECRET_DATABASE_URL),
 }
 
 
@@ -230,7 +230,7 @@ LOGGING = {
 # Email settings
 SECRET_EMAIL_URL = os.getenv('DJANGO_EMAIL_URL', '')
 # update EMAIL_ BACKEND, HOST, HOST_USER, HOST_PASSWORD, PORT settings
-vars().update(dj_email_url.parse(SECRET_EMAIL_URL))
+vars().update(parse_email_url('django', SECRET_EMAIL_URL))
 # site configuration
 EMAIL_SUBJECT_PREFIX = '[{{ project_name }}] '
 DEFAULT_FROM_EMAIL = 'no-reply <no-reply@example.com>'
