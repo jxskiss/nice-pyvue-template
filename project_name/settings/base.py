@@ -22,10 +22,10 @@ PROJECT_ROOT = os.path.dirname(DJANGO_ROOT)
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', '{{ secret_key }}')
+SECRET_KEY = os.getenv('SECRET_KEY', '{{ secret_key }}')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', 'yes')
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', 'yes')
 
 ALLOWED_HOSTS = ['*']
 
@@ -89,7 +89,7 @@ LOGIN_URL = '/admin/login/'
 # Database
 # https://docs.djangoproject.com/en/1.9/ref/settings/#databases
 
-SECRET_DATABASE_URL = os.getenv('DJANGO_DATABASE_URL', '')
+SECRET_DATABASE_URL = os.getenv('SECRET_DATABASE_URL', '')
 
 DATABASES = {
     'default': parse_db_url('django', SECRET_DATABASE_URL),
@@ -124,7 +124,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = os.getenv('DJANGO_TIMEZONE', 'Asia/Shanghai')
+TIME_ZONE = os.getenv('TIMEZONE', 'Asia/Shanghai')
 
 USE_I18N = True
 
@@ -147,7 +147,7 @@ if os.path.exists(_fe_dist_static):
 
 
 # Logging
-_env_log_level = os.getenv('DJANGO_LOG_LEVEL')
+_env_log_level = os.getenv('LOG_LEVEL')
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -228,7 +228,7 @@ LOGGING = {
 
 
 # Email settings
-SECRET_EMAIL_URL = os.getenv('DJANGO_EMAIL_URL', '')
+SECRET_EMAIL_URL = os.getenv('SECRET_EMAIL_URL', '')
 # update EMAIL_ BACKEND, HOST, HOST_USER, HOST_PASSWORD, PORT settings
 vars().update(parse_email_url('django', SECRET_EMAIL_URL))
 # site configuration

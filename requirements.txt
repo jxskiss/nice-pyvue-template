@@ -1,7 +1,9 @@
 django
-tornado
 whitenoise
 psycopg2
 gunicorn
 gevent
+aioredis
+asyncpg
+tornado
 click
