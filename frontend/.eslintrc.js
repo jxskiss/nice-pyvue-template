@@ -21,6 +21,7 @@ module.exports = {
     'semi': 0,
     'one-var': 0,
     'no-multi-spaces': 0,
+    'indent': 'off',
     // allow paren-less arrow functions
     'arrow-parens': 0,
     // allow async-await
