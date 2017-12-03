@@ -754,8 +754,8 @@ class _Mock(object):
 
             attr_name = 'from_file_{}'.format(hashlib.md5(b(file)).hexdigest())
             setattr(self.__class__, attr_name, cached_property(
-                lambda obj: json.loads(
-                    self._fix_json(open(file, encoding='utf8'))), ttl=ttl))
+                lambda obj: json.loads(self._fix_json(
+                    open(file, encoding='utf8').read())), ttl=ttl))
 
         def deco(func):
             @functools.wraps(func)
