@@ -55,7 +55,7 @@ class Mock2View(View):
     # The param file is optional, if absent, files "mock_data.json" and
     # "mock.json" will be searched
     @mock(key='mock2_get')
-    def get(self, request):
+    def get(self, request, some_id=None):
         raise NotImplementedError()
 
     # You can also raise mock.PleaseMockMe to make the mock decorator
