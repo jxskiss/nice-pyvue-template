@@ -25,6 +25,9 @@ urlpatterns = [
     # vue helloworld demo
     url(r'^$', generic.TemplateView.as_view(template_name='index.html')),
 
+    # demo user authorization APIs
+    url(r'^api/v1/users/', include('apps.common.urls_api_v1')),
+
     # demo django app with vue frontend pages
     url(r'^demo/', include('apps.demoapp.urls'))
 ]
