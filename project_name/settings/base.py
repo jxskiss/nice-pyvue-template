@@ -43,7 +43,7 @@ DJANGO_APPS = [
 
 LOCAL_APPS = [
     'apps.common',
-    'apps.demoapp',
+    'apps.mockapi',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS

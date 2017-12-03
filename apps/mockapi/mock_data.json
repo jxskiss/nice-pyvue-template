@@ -1,0 +1,65 @@
+{
+  /*
+    You can use block comments to describe your mock data in details.
+    Frontend and backend develop can write mock data and API definitions together.
+
+    If you want use this mock file inside js, JSMin will help.
+
+    如本文件示例一样，你可以使用任意舒服的姿势来书写注释和 API 定义。
+   */
+
+  // line comment is also supported
+  "mock1": {
+    "foo": "bar",  // and inline comment is ok
+    "baz": "blah"
+  },
+
+  /**
+   * @api {GET} /api/v1/mockapi/mock2 测试接口二查询
+   * @apiVersion 1.0.0
+   * @apiName QueryDataMock2
+   * @apiGroup V1-Mock
+
+   * @apiDescription Mock 数据接口示例。
+   *
+   * Mock 数据接口主要用来在后端 API 实现完成之前，可以快速给到前端数据，
+   * 通过使用支持注释的 JSON 文件作为 Mock 数据定义，接口定义也可以跟 Mock 数据写在一起，
+   * 方便前后端协作开发和开发维护。
+   *
+   * 前端和后端开发都可以已自己熟悉的方式编写 API 文档和 Mock 数据，并且只需要写一次。
+   * 写在 JSON 文件中的 Mock 数据，除了可以使用 `mock` 装饰器输出之外，在开发启动初期，
+   * 也可以直接由前端借助 JSMin `import` 到代码中使用。
+   *
+   * 希望可以给前后端的协作开发带来如丝般的顺滑体验，你懂的。
+
+   * @apiSuccess {String} code 请求状态
+   * @apiSuccess {String} [message] 错误消息
+   * @apiSuccess {Integer[]} [data] 返回数据
+   */
+  "mock2_get": [1, 2, 3],
+
+  /**
+    @api {POST} /api/v1/mockapi/mock2 测试接口二提交
+    @apiVersion 1.0.0
+    @apiName SubmitDataMock2
+    @apiGroup V1-Mock
+
+    @apiDescription Mock 数据接口示例。
+
+    * Mock 数据接口主要用来在后端 API 实现完成之前，可以快速给到前端数据，
+    * 通过使用支持注释的 JSON 文件作为 Mock 数据定义，接口定义也可以跟 Mock 数据写在一起，
+    * 方便前后端协作开发和开发维护。
+    *
+    * 前端和后端开发都可以已自己熟悉的方式编写 API 文档和 Mock 数据，并且只需要写一次。
+    * 写在 JSON 文件中的 Mock 数据，除了可以使用 `mock` 装饰器输出之外，在开发启动初期，
+    * 也可以直接由前端借助 JSMin `import` 到代码中使用。
+    *
+    * 希望可以给前后端的协作开发带来如丝般的顺滑体验，你懂的。
+
+    @apiSuccess {String} code 请求状态
+    @apiSuccess {String} [message] 错误消息
+    @apiSuccess {Integer[]} [data] 返回数据
+   */
+  "mock2_post": [1, 2, 3, 4]
+
+}

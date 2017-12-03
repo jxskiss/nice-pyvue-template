@@ -3,5 +3,5 @@ from __future__ import unicode_literals
 from django.apps import AppConfig
 
 
-class DemoappConfig(AppConfig):
-    name = 'apps.demoapp'
+class MockapiConfig(AppConfig):
+    name = 'apps.mockapi'

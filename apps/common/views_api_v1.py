@@ -17,7 +17,7 @@ The user should be already login to access this resource.
 @api_util.api_view(methods=('GET',), login_required=True)
 def profile(request):
     """
-    @api {GET} /api/v1/users/profile 查詢用戶信息
+    @api {GET} /api/v1/users/profile 查询用戶信息
     @apiPermission login
     @apiVersion 1.0.0
     @apiName UserProfile
