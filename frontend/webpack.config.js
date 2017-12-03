@@ -3,6 +3,7 @@
  */
 
 const fs = require('fs')
+const os = require('os')
 const glob = require('glob')
 const path = require('path')
 const webpack = require('webpack')
@@ -12,6 +13,9 @@ const HtmlWebpackPlugin = require('html-webpack-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 const FriendlyErrorsPlugin = require('friendly-errors-webpack-plugin')
 const OptimizeCSSPlugin = require('optimize-css-assets-webpack-plugin')
+
+const HappyPack = require('happypack')
+const happyThreadPool = HappyPack.ThreadPool({ size: os.cpus().length })
 
 /*
  * development and production configurations
@@ -230,7 +234,8 @@ module.exports = (options = {}) => {
   let exports = {
     context: path.resolve(__dirname),
     entry: merge(getPageEntries(resolveFrontend('src/@(main|index).[jt]s')),
-      getPageEntries(resolveFrontend(`src/${pagesDir}/**/*.[jt]s`))),
+      getPageEntries(resolveFrontend(`src/${pagesDir}/@(main|index).[jt]s`)),
+      getPageEntries(resolveFrontend(`src/${pagesDir}/*/@(main|index).[jt]s`))),
     output: {
       path: getConfig('assetsRoot'),
       filename: assetsPath(`js/${outputFilename('js', 'chunkhash')}`),
@@ -250,36 +255,43 @@ module.exports = (options = {}) => {
       rules: [
         {
           test: /\.(js|vue)$/,
-          loader: 'eslint-loader',
           enforce: 'pre',
           include: [resolveFrontend('src'), resolveFrontend('test')],
           exclude: /node_modules/,
-          options: {
-            formatter: require('eslint-friendly-formatter')
-          }
+          loader: 'happypack/loader?id=eslint',
+          // loader: 'eslint-loader',
+          // options: {
+          //   formatter: require('eslint-friendly-formatter')
+          // }
         },
         {
           test: /\.vue$/,
-          loader: 'vue-loader',
-          options: {
-            loaders: cssLoaders({
-              // usePostCSS: true,
-              minimize: getConfig('cssMinimize') || false,
-              sourceMap: getConfig('cssSourceMap') || false,
-              extract: getConfig('cssExtract') || false
-            }),
-            transformToRequire: {
-              video: ['src', 'poster'],
-              source: 'src',
-              img: 'src',
-              image: 'xlink:href'
-            }
-          }
+          include: [resolveFrontend('src'), resolveFrontend('test')],
+          exclude: /node_modules/,
+          loader: 'happypack/loader?id=vue',
+          // loader: 'vue-loader',
+          // options: {
+          //   loaders: merge(cssLoaders({
+          //     // usePostCSS: true,
+          //     minimize: getConfig('cssMinimize') || false,
+          //     sourceMap: getConfig('cssSourceMap') || false,
+          //     extract: getConfig('cssExtract') || false
+          //   }), {
+          //     'js': 'happypack/loader?id=babel'
+          //   }),
+          //   transformToRequire: {
+          //     video: ['src', 'poster'],
+          //     source: 'src',
+          //     img: 'src',
+          //     image: 'xlink:href'
+          //   }
+          // }
         },
         {
           test: /\.tsx?$/,
-          loader: 'ts-loader',
           include: [resolveFrontend('src'), resolveFrontend('test')],
+          exclude: /node_modules/,
+          loader: 'ts-loader',
           options: {
             appendTsSuffixTo: [/\.vue$/],
             // set to false to get benefits from static type checking
@@ -288,13 +300,16 @@ module.exports = (options = {}) => {
           }
         },
         {
-          test: /\.js$/,
-          loader: 'babel-loader',
+          test: /\.jsx?$/,
           include: [resolveFrontend('src'), resolveFrontend('test')],
-          exclude: /node_modules/
+          exclude: /node_modules/,
+          loader: 'happypack/loader?id=babel',
+          // loader: 'babel-loader',
         },
         {
           test: /\.json$/,
+          include: [resolveFrontend('src'), resolveFrontend('test')],
+          exclude: /node_modules/,
           loader: 'json-loader'
         },
         {
@@ -333,6 +348,46 @@ module.exports = (options = {}) => {
     externals: {},
 
     plugins: [
+      new webpack.optimize.OccurrenceOrderPlugin(),
+      // accelerate building process
+      new HappyPack({
+        id: 'eslint',
+        threadPool: happyThreadPool,
+        loaders: [
+          {
+            loader: 'eslint-loader',
+            options: { formatter: require('eslint-friendly-formatter') }
+          }
+        ]
+      }),
+      new HappyPack({
+        id: 'babel',
+        threadPool: happyThreadPool,
+        loaders: ['babel-loader?cacheDirectory=true']
+      }),
+      new HappyPack({
+        id: 'vue',
+        threadPool: happyThreadPool,
+        loaders: [
+          {
+            loader: 'vue-loader',
+            options: {
+              loaders: cssLoaders({
+                // usePostCSS: true,
+                minimize: getConfig('cssMinimize') || false,
+                sourceMap: getConfig('cssSourceMap') || false,
+                extract: getConfig('cssExtract') || false
+              }),
+              transformToRequire: {
+                video: ['src', 'poster'],
+                source: 'src',
+                img: 'src',
+                image: 'xlink:href'
+              }
+            }
+          }
+        ]
+      }),
       // extract css into its own file
       new ExtractTextPlugin({
         filename: assetsPath(`css/${outputFilename('css')}`)
@@ -377,8 +432,7 @@ module.exports = (options = {}) => {
   /*
    * build entry pages, config HtmlWebpackPlugin for each entry
    */
-  for (let pathname in merge(getPageEntries(resolveFrontend('src/@(index|main).[jt]s')),
-    getPageEntries(resolveFrontend(`src/${pagesDir}/**/@(index|main).[jt]s`)))) {
+  for (let pathname in exports.entry) {
     let conf = {
       filename: ((pn) => {
         // always use index.html as output filename for main or index entry
@@ -421,6 +475,10 @@ module.exports = (options = {}) => {
    * build standalone html pages, config HtmlWebpackPlugin for each page
    */
   for (let pathname in getPageEntries(resolveFrontend(`src/${pagesDir}/**/!(index|main).html`))) {
+    let pageEntry = getPageEntries(resolveFrontend(`src/${pagesDir}/${pathname}.[tj]s`))
+    if (pageEntry && Object.keys(pageEntry).length > 0) {
+      exports.entry = merge(exports.entry, pageEntry)
+    }
     let hasEntry = exports.entry.hasOwnProperty(pathname)
     let conf = {
       filename: pathname + '.html',
