@@ -10,6 +10,7 @@ https://docs.djangoproject.com/en/{{ docs_version }}/ref/settings/
 
 import sys
 import os
+
 from utils.confurl import parse_db_url, parse_email_url
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -42,6 +43,7 @@ DJANGO_APPS = [
 
 LOCAL_APPS = [
     'apps.common',
+    'apps.mockapi',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS

@@ -24,6 +24,10 @@ urlpatterns = [
 
     # vue helloworld demo
     url(r'^$', generic.TemplateView.as_view(template_name='index.html')),
+
+    # demo user authorization and mock data APIs
+    url(r'^api/v1/users/', include('apps.common.urls_api_v1')),
+    url(r'^api/v1/mockapi/', include('apps.mockapi.urls_api_v1')),
 ]
 
 # serve apidoc and other static files in debug mode

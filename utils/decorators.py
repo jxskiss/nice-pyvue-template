@@ -13,6 +13,7 @@ import json
 import logging
 import math
 import os
+import re
 import sys
 import threading
 import time
@@ -693,6 +694,47 @@ class _Mock(object):
     class PleaseMockMe(Exception):
         pass
 
+    @staticmethod
+    def _fix_json(string):
+        """
+        https://gist.github.com/liftoff/ee7b81659673eca23cd9fc0d8b8e68b7
+        Copyright: Dan McDougall <daniel.mcdougall@liftoffsoftware.com>
+
+        Removes C-style comments and trailing commas from string.
+
+        .. code-block:: javascript
+
+            {
+                // A comment!  You normally can't put these in JSON
+                "testing": {
+                    "foo": "bar", // <-- A trailing comma!  No worries.
+                }, // <-- Another one!
+                /*
+                This style of comments will also be safely removed
+                */
+            }
+
+        """
+        comments_re = re.compile(
+            r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
+            re.DOTALL | re.MULTILINE
+        )
+        trailing_object_commas_re = re.compile(
+            r'(,)\s*}(?=([^"\\]*(\\.|"([^"\\]*\\.)*[^"\\]*"))*[^"]*$)')
+        trailing_array_commas_re = re.compile(
+            r'(,)\s*\](?=([^"\\]*(\\.|"([^"\\]*\\.)*[^"\\]*"))*[^"]*$)')
+
+        def uncomment(match):
+            s = match.group(0)
+            if s[0] == '/':
+                return ''
+            return s
+
+        string = comments_re.sub(uncomment, string)
+        string = trailing_object_commas_re.sub("}", string)
+        string = trailing_array_commas_re.sub("]", string)
+        return string
+
     def from_file(self, key=None, file=None, ttl=3600, default=None,
                   exceptions=(NotImplementedError, PleaseMockMe)):
         if default is None and not file:
@@ -712,7 +754,8 @@ class _Mock(object):
 
             attr_name = 'from_file_{}'.format(hashlib.md5(b(file)).hexdigest())
             setattr(self.__class__, attr_name, cached_property(
-                lambda obj: json.load(open(file, encoding='utf8')), ttl=ttl))
+                lambda obj: json.loads(self._fix_json(
+                    open(file, encoding='utf8').read())), ttl=ttl))
 
         def deco(func):
             @functools.wraps(func)

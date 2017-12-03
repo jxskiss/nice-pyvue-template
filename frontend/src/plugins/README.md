@@ -4,23 +4,18 @@
 
 Put plugins used by many components or js files here.
 
-The plugins can be imported by three ways:
+Plugin usage example:
 
-1. use relative path:
+    import MomentPlugin from '@/plugins/awesome.js'
+    Vue.use(MomentPlugin)
 
-   `import AwesomePlugin from '../../plugins/awesome.js`
+    new Vue({
+      created() {
+        console.log(this.$moment.now());
+      }
+    })
 
-2. use plugins/foo.js directly:
-
-   `import AwesomePlugin from 'plugins/awesome.js`
-
-3. use @ to indicate local files:
-
-   `import AwesomePlugin from '@/plugins/awesome.js`,
-
-   this is the default way used by vue-cli webpack template.
-
-See webpack.config.js for more details about path resolving.
+Look the plugin for particular usages.
 
 ## Write Plugins
 
