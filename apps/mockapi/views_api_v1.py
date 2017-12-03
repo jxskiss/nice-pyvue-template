@@ -52,17 +52,18 @@ class Mock2View(View):
 
     """
 
-    # param file is optional, if absent, files "mock_data.json" and
+    # The param file is optional, if absent, files "mock_data.json" and
     # "mock.json" will be searched
     @mock(key='mock2_get')
     def get(self, request):
         raise NotImplementedError()
 
-    # you can also raise mock.PleaseMockMe to make mock decorator
-    # intercept the response
+    # You can also raise mock.PleaseMockMe to make the mock decorator
+    # intercept the response.
+    # When using PleaseMockMe, a different key can be specified optionally.
     @mock(key='mock2_post')
     def post(self, request):
         data = []
         if not data:
-            raise mock.PleaseMockMe()
+            raise mock.PleaseMockMe('mock2_post_alternative')
         return data

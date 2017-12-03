@@ -20,6 +20,7 @@ from django.http.request import QueryDict
 from django.http.response import HttpResponseBase, JsonResponse, Http404
 
 from .. import exceptions as api_exc
+from ..decorators import mock
 
 _logger = logging.getLogger(__name__)
 
@@ -125,7 +126,12 @@ def api_view(view_func=None,
                 if parse_body:
                     _parse_request_body(request)
 
-                result = func(request, *args, **kwargs)
+                try:
+                    result = func(request, *args, **kwargs)
+                except mock.Missing as err:
+                    six.reraise(api_exc.MockKeyMissing,
+                                api_exc.MockKeyMissing(err.key), None)
+
                 if result and isinstance(result, HttpResponseBase):
                     return result
 

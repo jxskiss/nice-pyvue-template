@@ -205,3 +205,15 @@ class Throttled(APIException):
             detail = ' '.join((detail, extra))
         self.wait = wait
         super(Throttled, self).__init__(detail, code)
+
+
+class MockKeyMissing(APIException):
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    default_detail = 'Mock data key "{key}" is missing.'
+    default_code = 'mock_key_missing'
+
+    def __init__(self, key, detail=None, code=None):
+        self.key = key
+        if detail is None:
+            detail = self.default_detail.format(key=key)
+        super(MockKeyMissing, self).__init__(detail, code)

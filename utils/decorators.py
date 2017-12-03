@@ -67,7 +67,8 @@ class cached_attribute(object):
 
     To expire a cached attribute value with positive TTL manually just do:
 
-        del class._attr_cache_[<attribute name>]
+        del instance.<attribute name>
+        # or: del class._attr_cache_[<attribute name>]
 
     """
 
@@ -106,6 +107,12 @@ class cached_attribute(object):
                     setattr(cls, self.cache_attr, cache)
                 cache[self.__name__] = (value, now)
             return value
+
+    def __delete__(self, obj):
+        try:
+            del getattr(obj, self.cache_attr)[self.__name__]
+        except (AttributeError, KeyError):
+            pass
 
 
 class cached_property(object):
@@ -148,7 +155,8 @@ class cached_property(object):
 
     To expire a cached property value with positive TTL manually just do:
 
-        del instance._prop_cache_[<property name>]
+        del instance.property
+        # or: del instance._prop_cache_[<property name>]
 
     """
     def __init__(self, func=None, ttl=0, cache_attr='_prop_cache_'):
@@ -188,6 +196,12 @@ class cached_property(object):
                     setattr(obj, self.cache_attr, cache)
                 cache[self.__name__] = (value, now)
             return value
+
+    def __delete__(self, obj):
+        try:
+            del getattr(obj, self.cache_attr)[self.__name__]
+        except (AttributeError, KeyError):
+            pass
 
 
 class dict_property(object):
@@ -692,10 +706,17 @@ class _Mock(object):
     """
 
     class PleaseMockMe(Exception):
-        pass
+
+        def __init__(self, key=None):
+            self.key = key
+
+    class KeyMissing(Exception):
+
+        def __init__(self, key):
+            self.key = key
 
     @staticmethod
-    def _fix_json(string):
+    def fix_json(string):
         """
         https://gist.github.com/liftoff/ee7b81659673eca23cd9fc0d8b8e68b7
         Copyright: Dan McDougall <daniel.mcdougall@liftoffsoftware.com>
@@ -754,7 +775,7 @@ class _Mock(object):
 
             attr_name = 'from_file_{}'.format(hashlib.md5(b(file)).hexdigest())
             setattr(self.__class__, attr_name, cached_property(
-                lambda obj: json.loads(self._fix_json(
+                lambda obj: json.loads(self.fix_json(
                     open(file, encoding='utf8').read())), ttl=ttl))
 
         def deco(func):
@@ -763,8 +784,18 @@ class _Mock(object):
                 try:
                     return func(*args, **kwargs)
                 except exceptions as err:
-                    if key and file:
-                        return getattr(self, attr_name)[key]
+                    if isinstance(err, _Mock.PleaseMockMe) and err.key:
+                        m_k = err.key
+                    else:
+                        m_k = key
+                    if m_k and file:
+                        try:
+                            return getattr(self, attr_name)[m_k]
+                        except KeyError as err:
+                            # expire the cache to force reloading
+                            delattr(self, attr_name)
+                            reraise(_Mock.KeyMissing, _Mock.KeyMissing(m_k),
+                                    None)
                     if callable(default):
                         return default()
                     return default
