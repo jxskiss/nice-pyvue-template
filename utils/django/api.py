@@ -128,7 +128,7 @@ def api_view(view_func=None,
 
                 try:
                     result = func(request, *args, **kwargs)
-                except mock.Missing as err:
+                except mock.KeyMissing as err:
                     six.reraise(api_exc.MockKeyMissing,
                                 api_exc.MockKeyMissing(err.key), None)
 

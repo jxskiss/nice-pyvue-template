@@ -34,14 +34,16 @@ urlpatterns = [
 # in production mode, the files is strongly recommended to be served
 # by professional web server, e.g. the popular lightweight nginx
 if settings.DEBUG:
-    apidoc_root = os.path.join(settings.PROJECT_ROOT, 'staticfiles', 'apidoc')
-    media_root = os.path.join(settings.PROJECT_ROOT, 'staticfiles', 'media')
+    apidoc_root = os.path.join(settings.PROJECT_ROOT, 'frontend/dist/apidoc')
+    media_root = os.path.join(settings.PROJECT_ROOT, 'staticfiles/media')
     urlpatterns += [
         # serve apidoc index page
-        url(r'^apidoc/(?:index.html)?$', static.serve, kwargs={
-            'document_root': apidoc_root, 'path': 'index.html'}),
+        url(r'^apidoc/(?:index.html)?$', static.serve,
+            kwargs={'document_root': apidoc_root, 'path': 'index.html'}),
         # serve apidoc assets files
-        url(r'^apidoc/(?P<path>.+)$', static.serve, kwargs={'document_root': apidoc_root}),
+        url(r'^apidoc/(?P<path>.+)$', static.serve,
+            kwargs={'document_root': apidoc_root}),
         # serve site media files
-        url(r'^media/(?P<path>.+)$', static.serve, kwargs={'document_root', media_root}),
+        url(r'^media/(?P<path>.+)$', static.serve,
+            kwargs={'document_root', media_root}),
     ]

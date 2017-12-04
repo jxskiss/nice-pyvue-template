@@ -10,12 +10,12 @@ import env from './env.config'
 export function apiBase() {
   // maybe use env to distinct API base url is better?
   let hostname = window.location.hostname,
-    API_BASE_URL = 'http://localhost:8000'  // 默认开发环境
+    API_BASE_URL = '/api'  // 默认开发环境, PROXY 反向代理
 
   if (hostname === 'www.example.com') {  // 正式生产环境
     API_BASE_URL = 'http://api.example.com'
   } else if (hostname === 'test.example.com') {  // 测试环境
-    API_BASE_URL = 'http://test.example.com'
+    API_BASE_URL = 'http://test-api.example.com'
   }
   return API_BASE_URL
 }
@@ -23,17 +23,17 @@ export function apiBase() {
 export function COMMON_API () {
   return {
     Users: {
-      Profile: apiBase() + '/api/v1/common/users/profile',
-      Login: apiBase() + '/api/v1/common/users/login',
-      Logout: apiBase() + '/api/v1/common/users/logout'
+      Profile: apiBase() + '/v1/common/users/profile',
+      Login: apiBase() + '/v1/common/users/login',
+      Logout: apiBase() + '/v1/common/users/logout'
     }
   }
 }
 
 export function MOCK_API () {
   return {
-    Mock1: apiBase() + '/api/v1/mockapi/mock1',
-    Mock2: apiBase() + '/api/v1/mockapi/mock2/'
+    Mock1: apiBase() + '/v1/mockapi/mock1',
+    Mock2: apiBase() + '/v1/mockapi/mock2/'
   }
 }
 

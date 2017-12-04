@@ -758,8 +758,11 @@ class _Mock(object):
 
     def from_file(self, key=None, file=None, ttl=3600, default=None,
                   exceptions=(NotImplementedError, PleaseMockMe)):
-        if default is None and not file:
-            caller_dir = os.path.dirname(inspect.stack()[1][1])
+        caller_dir = os.path.dirname(inspect.stack()[1][1])
+        if file and not os.path.isabs(file):
+            file = os.path.join(caller_dir, file)
+        elif default is None:
+            # search for default mock data json files
             guess_files = [
                 os.path.join(caller_dir, 'mock_data.json'),
                 os.path.join(caller_dir, 'mock.json'),

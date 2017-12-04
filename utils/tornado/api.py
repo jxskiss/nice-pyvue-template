@@ -117,7 +117,7 @@ class ApiRequestHandler(RequestHandler):
                     self.set_header(k, v)
             self.set_status(exc.status_code)
             self.finish_json(data)
-        elif isinstance(exc, mock.Missing):
+        elif isinstance(exc, mock.KeyMissing):
             self.set_status(api_exc.MockKeyMissing.status_code)
             self.finish_json({
                 'code': api_exc.MockKeyMissing.default_code,

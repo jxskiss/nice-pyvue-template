@@ -22,6 +22,8 @@ staticfiles/**
 
 # frontend files
 node_modules
-frontend/dist/*
+frontend/dist/**
+!frontend/dist/**/
 !frontend/dist/README.md
+!frontend/dist/apidoc/README.md
 webpack.config.log*

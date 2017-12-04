@@ -13,7 +13,7 @@ from utils.decorators import mock
 @mock(key='mock1', file='mock_data.json', ttl=3600)
 def mock1(request):
     """
-    @api {GET} /api/v1/mockapi/mock1 测试数据接口
+    @api {GET} /v1/mockapi/mock1 测试数据接口
     @apiVersion 1.0.0
     @apiName DataMock1
     @apiGroup V1-Mock
