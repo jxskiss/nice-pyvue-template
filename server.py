@@ -15,20 +15,12 @@ define('django', type=bool, default=False, help='enable django integration')
 define('port', type=int, default=8000, help='listening port')
 define('addr', type=str, default='0.0.0.0', help='listening address')
 
-# DJANGO_SETTINGS_MODULE MUST be available before importing any django
-# related things
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "{{ project_name }}.settings")
-dj_settings = None
-
 
 def main():
-    global dj_settings
-
     # load environment variables from .env file
     dotenv.read_dotenv(dotenv.find_dotenv())
     parse_command_line()
 
-    use_uvloop = False
     if options.uvloop:
         from tornado.platform.asyncio import AsyncIOMainLoop
         try:
@@ -36,8 +28,8 @@ def main():
             import uvloop
             asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
             AsyncIOMainLoop().install()
-            use_uvloop = True
         except ImportError:
+            options.uvloop = False
             gen_log.error(
                 'cannot import asyncio and uvloop, fallback to IOLoop')
 
@@ -45,6 +37,11 @@ def main():
     # NOTE: any django related things must be AFTER parsing options
     options.django = options.django or options.debug
 
+    # DJANGO_SETTINGS_MODULE MUST be available before importing any django
+    # related things
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE",
+                          "{{ project_name }}.settings")
+    dj_settings = None
     if options.django:
         if not options.debug:
             gen_log.warn(
@@ -100,7 +97,7 @@ def main():
                  options.addr, options.port, serving_mode, django_mode)
     app.listen(options.port, options.addr)
 
-    if use_uvloop:
+    if options.uvloop:
         asyncio.get_event_loop().run_forever()
     else:
         ioloop.IOLoop.instance().start()

@@ -66,7 +66,7 @@ function makeBuildConfigs (options) {
       port: process.env.PORT || 8080,
       // https://webpack.github.io/docs/webpack-dev-server.html#proxy
       proxy: {
-        '/api': `http://${process.env.BACKEND || 'localhost:8000'}`
+        '/api/': `http://${process.env.BACKEND || 'localhost:8000'}`
       },
       // dev specific plugins
       extraPlugins: [
