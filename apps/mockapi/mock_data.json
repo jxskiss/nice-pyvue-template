@@ -15,7 +15,7 @@
   },
 
   /**
-   * @api {GET} /api/v1/mockapi/mock2 测试接口二查询
+   * @api {GET} /v1/mockapi/mock2/ 测试接口二查询
    * @apiVersion 1.0.0
    * @apiName QueryDataMock2
    * @apiGroup V1-Mock
@@ -39,7 +39,7 @@
   "mock2_get": [1, 2, 3],
 
   /**
-    @api {POST} /api/v1/mockapi/mock2 测试接口二提交
+    @api {POST} /v1/mockapi/mock2/ 测试接口二提交
     @apiVersion 1.0.0
     @apiName SubmitDataMock2
     @apiGroup V1-Mock

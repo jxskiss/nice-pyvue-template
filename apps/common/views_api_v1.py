@@ -17,7 +17,7 @@ The user should be already login to access this resource.
 @api_util.api_view(methods=('GET',), login_required=True)
 def profile(request):
     """
-    @api {GET} /api/v1/users/profile 查询用戶信息
+    @api {GET} /v1/common/users/profile 查询用戶信息
     @apiPermission login
     @apiVersion 1.0.0
     @apiName UserProfile
@@ -50,7 +50,7 @@ def profile(request):
 @api_util.api_view(methods=('POST',), parse_body=True)
 def login_ajax(request):
     """
-    @api {POST} /api/v1/users/login 用戶登陆
+    @api {POST} /v1/common/users/login 用戶登陆
     @apiVersion 1.0.0
     @apiName UserLogin
     @apiGroup V1-Users
@@ -114,7 +114,7 @@ def login_ajax(request):
 @api_util.api_view(methods=('GET',))
 def logout_ajax(request):
     """
-    @api {GET} /api/v1/users/logout 退出登陆
+    @api {GET} /v1/common/users/logout 退出登陆
     @apiVersion 1.0.0
     @apiName UserLogout
     @apiGroup V1-Users

@@ -30,7 +30,7 @@ def _patch_command_startapp(main_func):
         # fix app name in AppConfig
         app_config_path = os.path.join(app_dir, 'apps.py')
         if os.path.exists(app_config_path):
-            with open(os.path.join(app_dir), 'r+') as fd:
+            with open(app_config_path, 'r+') as fd:
                 content = fd.read()
                 new_content = re.sub(
                     r"name\s*=\s*'{}'".format(app_name),
