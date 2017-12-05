@@ -13,18 +13,21 @@ TARGETS = ['django', 'tornado', 'hobgoblin']
 BASE_URL = 'https://github.com/jxskiss/nice-pyvue-template/archive'
 TPL_EXTENSIONS = ['.py', '.json', '.js', '.md', '.conf', '.env']
 
-target = os.getenv('TARGET', '').strip().lower()
 inputs = {}
-if not target:
-    raise SystemExit('Error: environment variable TARGET not found.')
-if target not in TARGETS:
-    raise SystemExit('Error: unknown TARGET: %s, available: %s.',
-                     target, ' '.join(TARGETS))
 variables = {}
 
 
 def pre_action():
     global inputs, variables
+
+    target = os.getenv('TARGET', '').strip().lower()
+    while not target:
+        target = input('Target branch (django, tornado, hobgoblin): ').strip()
+        if not target:
+            print('Error: target branch must be provided.')
+        elif target not in TARGETS:
+            print('Error: unknown target: "%s".' % target)
+    inputs['target'] = target
 
     proj_name = os.getenv('PROJECT_NAME', '').strip().lower()
     while not proj_name:
@@ -99,7 +102,7 @@ def extract_zip(file, path):
 def main():
     pre_action()
 
-    if target == 'tornado':
+    if inputs['target'] == 'tornado':
         if os.path.exists(inputs['project_name']):
             if os.listdir(inputs['project_name']):
                 raise SystemExit(
@@ -120,7 +123,7 @@ def main():
 
     # django and the hobgoblin
     else:
-        branch = 'master' if target == 'django' else 'hobgoblin'
+        branch = 'master' if inputs['target'] == 'django' else 'hobgoblin'
         cmd = (
             "django-admin.py startproject "
             "--template {base}/{branch}.zip "
