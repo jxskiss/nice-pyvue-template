@@ -37,7 +37,7 @@ def main():
         # serve static files in debug mode
         handlers += [
             (r'^/apidoc/(.*)$', web.StaticFileHandler, dict(
-                path='staticfiles/apidoc', default_filename='index.html')),
+                path='frontend/dist/apidoc', default_filename='index.html')),
             (r'^/media/(.+)$', web.StaticFileHandler, dict(
                 path='staticfiles/media')),
             (r'^/static/(.+)$', web.StaticFileHandler, dict(

@@ -13,7 +13,7 @@ import six
 from tornado.web import RequestHandler, HTTPError, MissingArgumentError
 
 from .. import exceptions as api_exc
-from .. import http_status as status
+from ..decorators import mock
 
 _logger = logging.getLogger(__name__)
 
@@ -117,6 +117,12 @@ class ApiRequestHandler(RequestHandler):
                     self.set_header(k, v)
             self.set_status(exc.status_code)
             self.finish_json(data)
+        elif isinstance(exc, mock.KeyMissing):
+            self.set_status(api_exc.MockKeyMissing.status_code)
+            self.finish_json({
+                'code': api_exc.MockKeyMissing.default_code,
+                'message': api_exc.MockKeyMissing.default_detail.format(exc.key)
+            })
         elif isinstance(exc, MissingArgumentError):
             self.set_status(exc.status_code)
             self.finish_json({
