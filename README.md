@@ -209,7 +209,7 @@ npm install
 # live development server with hot reloading
 npm run dev
 
-# use specified port and pass "/api" requests to backend
+# use specified port and pass "/api/" requests to backend
 API=8080 BACKEND=127.0.0.1:8000 npm run dev
 
 # build for development and watch changes

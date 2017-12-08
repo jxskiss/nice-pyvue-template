@@ -18,7 +18,6 @@ def main():
     dotenv.read_dotenv(dotenv.find_dotenv())
     parse_command_line()
 
-    use_uvloop = False
     if options.uvloop:
         from tornado.platform.asyncio import AsyncIOMainLoop
         try:
@@ -26,8 +25,8 @@ def main():
             import uvloop
             asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
             AsyncIOMainLoop().install()
-            use_uvloop = True
         except ImportError:
+            options.uvloop = False
             gen_log.error(
                 'cannot import asyncio and uvloop, fallback to IOLoop')
 
@@ -56,7 +55,7 @@ def main():
                  options.addr, options.port, serving_mode)
     app.listen(options.port, options.addr)
 
-    if use_uvloop:
+    if options.uvloop:
         asyncio.get_event_loop().run_forever()
     else:
         ioloop.IOLoop.instance().start()
