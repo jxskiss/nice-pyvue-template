@@ -566,9 +566,14 @@ def singleton(cls):
         Foo().x = 20
         assert Foo().x == 20
     """
-
-    cls.__new_original__ = cls.__new__
-
+    # Mark as staticmethod to work with python2, reference:
+    # https://stackoverflow.com/a/36190583
+    # Any function stored as an attribute on a class object is treated as a
+    # method by Python. On Python 2, that means it requires the first argument
+    # to be an instance of the class (which will be passed automatically
+    # if the attribute is requested via an instance). On Python 3, unbound
+    # methods no longer check their arguments in that way.
+    @staticmethod
     @functools.wraps(cls.__new__)
     def singleton_new(cls, *args, **kwargs):
         it = cls.__dict__.get('__it__')
@@ -579,7 +584,9 @@ def singleton(cls):
         it.__init_original__(*args, **kwargs)
         return it
 
+    cls.__new_original__ = cls.__new__
     cls.__new__ = singleton_new
+
     cls.__init_original__ = cls.__init__
     cls.__init__ = object.__init__
 
