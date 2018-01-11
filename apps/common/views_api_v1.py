@@ -90,10 +90,7 @@ def login_ajax(request):
         }
 
     """  # noqa
-    data = getattr(request, 'QUERY_DICT', None)
-    if not data:
-        data = getattr(request, 'JSON', {})
-
+    data = getattr(request, '_JSON', request.POST)
     username = data.get('username')
     password = data.get('password')
     if not all((username, password)):

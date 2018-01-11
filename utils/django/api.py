@@ -73,32 +73,37 @@ def _handle_exception(exc, context=None):
             }, status=api_exc.APIException.status_code)
 
 
+def _parse_json(text):
+    if isinstance(text, six.string_types):
+        return json.loads(text)
+    return json.loads(text.decode())
+
+
 def _parse_request_body(request):
     """
-    Parse data and cache as JSON or QUERY_DICT attribute for request for
-    convenience and better performance.
+    Parse data and cache as _JSON or _QUERY_DICT attribute of request
+    for convenience and better performance.
     """
     if not request.body:
         return
 
-    if 'application/json' in request.META['CONTENT_TYPE']:
+    if request.content_type == 'application/json':
         try:
-            if isinstance(request.body, six.string_types):
-                data = json.loads(request.body)
-            else:
-                data = json.loads(request.body.decode('utf-8'))
+            request._JSON = _parse_json(request.body)
         except Exception as exc:
             six.raise_from(api_exc.ParseError('Invalid JSON body.'), exc)
-        # cache json data to request for better performance
-        request.JSON = data
-    elif (request.META['CONTENT_TYPE'] ==
-            'application/x-www-form-urlencoded'):
-        if request.method == 'POST':
-            query_dict = request.POST
-        else:
-            query_dict = QueryDict(request.body)
-        # cache query dict to request for better performance
-        request.QUERY_DICT = query_dict
+    # try to parse as json for malformed request
+    elif not request.content_type:
+        try:
+            request._JSON = _parse_json(request.body)
+        except json.JSONDecodeError as exc:
+            pass
+    # let Django handle POST data in the default way
+    elif request.method == 'POST':
+        pass
+    elif request.content_type == 'application/x-www-form-urlencoded':
+        request._QUERY_DICT = QueryDict(request.body)
+    # any other case should be leaved to the user
     else:
         pass
 
@@ -165,17 +170,14 @@ def api_token_required(validator,
             if exclude_methods and request.method in exclude_methods:
                 return view_func(request, *args, **kwargs)
 
-            token = None
             # header take precedence over parameters
             if header and header in request.META:
                 token = request.META[header]
             elif request.method == 'GET':
                 token = request.GET.get(token_field)
             else:
-                if hasattr(request, 'QUERY_DICT'):
-                    token = request.QUERY_DICT.get('token')
-                elif hasattr(request, 'JSON'):
-                    token = request.JSON.get('token')
+                token = getattr(request, '_JSON', getattr(
+                    request, '_QUERY_DICT', request.POST)).get('token')
 
             if not token:
                 raise api_exc.NotAuthenticated()
