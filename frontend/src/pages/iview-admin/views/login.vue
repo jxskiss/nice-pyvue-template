@@ -38,6 +38,7 @@
 
 <script>
 import Cookies from 'js-cookie';
+import { commonApi } from '@/common/api'
 export default {
     data () {
         return {
@@ -59,9 +60,18 @@ export default {
         handleSubmit () {
             this.$refs.loginForm.validate((valid) => {
                 if (valid) {
-                    Cookies.set('user', this.form.userName);
-                    this.$router.push({
-                        name: 'home_index'
+                    let vm = this;
+                    commonApi.loginUser({
+                        username: this.form.userName,
+                        password: this.form.password
+                    }).then(function (resp) {
+                        Cookies.set('user', resp.data.data.username)
+                        let next = vm.$route.query.redirect;
+                        if (next) {
+                            vm.$router.push({ path: next })
+                        } else {
+                            vm.$router.push({ name: 'home_index' })
+                        }
                     });
                 }
             });

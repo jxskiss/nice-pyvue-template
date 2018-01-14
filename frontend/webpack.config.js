@@ -64,6 +64,7 @@ function makeBuildConfigs (options) {
       // cheap-module-eval-source-map is faster for development
       devtool: '#cheap-module-eval-source-map',
       port: process.env.PORT || 8080,
+      disableHostCheck: true,
       // https://webpack.github.io/docs/webpack-dev-server.html#proxy
       proxy: {
         '/api/': `http://${process.env.BACKEND || 'localhost:8000'}`
@@ -350,6 +351,9 @@ module.exports = (options = {}) => {
     externals: {},
 
     plugins: [
+      new webpack.DefinePlugin({
+        'process.env.NODE_ENV': `"${process.env.NODE_ENV || 'development'}"`
+      }),
       new webpack.optimize.OccurrenceOrderPlugin(),
       // accelerate building process
       new HappyPack({
@@ -427,7 +431,8 @@ module.exports = (options = {}) => {
       historyApiFallback: true,
       hot: true,
       port: buildConfigs.dev.port,
-      proxy: buildConfigs.dev.proxy
+      proxy: buildConfigs.dev.proxy,
+      disableHostCheck: buildConfigs.dev.disableHostCheck || false
     }
   }
 

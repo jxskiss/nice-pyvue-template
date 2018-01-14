@@ -20,8 +20,8 @@ _QUOTE_SIGN = ''
 # what to do if variable not in environment: raise, warn, ignore
 _IF_ENV_MISS = 'raise'
 
-# whether override existing variable from file .env
-_OVERRIDE_EXISTING = True
+# whether override existing variable from os with values from .env file
+_OVERRIDE_IF_EXIST = True
 
 
 DEBUG = False
@@ -47,7 +47,7 @@ else:
         warnings.warn(
             '.env file not found in working directory, searching parents',
             UserWarning)
-    dotenv.read_dotenv(dotenv.find_dotenv(), override=_OVERRIDE_EXISTING)
+    dotenv.read_dotenv(dotenv.find_dotenv(), override=_OVERRIDE_IF_EXIST)
     _values = {}
     for _var in dir():
         if _var.isupper() and not _var.startswith('_'):

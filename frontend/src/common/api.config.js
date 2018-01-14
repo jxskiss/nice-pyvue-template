@@ -1,17 +1,17 @@
 /**
- * 关于 Vue.js 项目 API、Router 模块化配置，推荐一篇很好的文章：
+ * 关于 Vue.js 项目 API、Router 模块化配置，推荐两篇文章：
  * https://segmentfault.com/a/1190000009858990
+ * https://juejin.im/post/5a52c9a4f265da3e2a0d6b74
  */
 
 import axios from 'axios'
 import qs from 'query-string'
 import env from './env.config'
 
-
 function baseUrl () {
   // maybe use env to distinct API base url is better?
   let hostname = window.location.hostname,
-    API_BASE_URL = '/api'  // 默认开发环境, PROXY 反向代理
+    API_BASE_URL = `http://${window.location.host}`  // 默认开发环境, PROXY 反向代理
 
   if (hostname === 'www.example.com') {  // 正式生产环境
     API_BASE_URL = 'http://api.example.com'
@@ -20,7 +20,6 @@ function baseUrl () {
   }
   return API_BASE_URL
 }
-
 
 // CSRF token settings for Django
 axios.defaults.xsrfCookieName = 'csrftoken';
@@ -41,30 +40,28 @@ axios.interceptors.response.use(function (response) {
   return response
 }, function (error) {
   if (env === 'development') {
-    console.log('Error response from:', error.config.url)
+    let detail = error
     if (error.response && error.response.data) {
-      let data = error.response.data
+      const data = error.response.data
       if (data.code === 'error_with_traceback') {
-        console.log(data.traceback)
+        detail = data.traceback
       } else {
-        console.log(data.code, data.message)
+        detail = `${data.code}: ${data.message}`
       }
-    } else {
-      console.log(error)
     }
-  } else {
-    console.log(error)
+    console.log('Error response from:', error.config.url, detail)
   }
   return Promise.reject(error)
 })
 
-
-export default defaultOptions = {
+const defaultOptions = {
   baseUrl: baseUrl(),
+  // CSRF token settings for Django
   xsrfCookieName: 'csrftoken',
   xsrfHeaderName: 'X-CSRFToken',
   headers: {
-    // 'Content-Type': 'application/x-www-form-urlencoded',
+    // 'Content-Type': 'application/x-www-form-urlencoded'
+    'Content-Type': 'application/json'
   },
   transformRequest: [function (data, headers) {
     if (headers['Content-Type'] === 'application/x-www-form-urlencoded') {
@@ -72,3 +69,5 @@ export default defaultOptions = {
     }
   }]
 }
+
+export default defaultOptions;
