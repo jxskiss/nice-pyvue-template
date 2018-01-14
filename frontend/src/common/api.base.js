@@ -158,7 +158,7 @@ export default function makeApiModule (apiDefs) {
 //   // can be string, "GET" method will be used by default
 //   getTag: '/tags/:id',
 //   // can be array, [method, url]
-//   getTagPagebleList: ['GET', '/tags'],
+//   getTagPageableList: ['GET', '/tags'],
 //   // or object style, { method, url }
 //   getTagFullList: {method: 'GET', url: '/tags'},
 //

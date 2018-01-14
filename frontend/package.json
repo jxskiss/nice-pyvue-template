@@ -84,7 +84,7 @@
   ],
   "apidoc": {
     "title": "{{ project_name|title }} API Documentation",
-    "url": "http://{{project_name}}.example.com/api",
+    "url": "http://{{ project_name }}.example.com/api",
     "sampleUrl": "http://localhost:8080/api"
   }
 }

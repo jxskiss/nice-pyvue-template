@@ -16,7 +16,7 @@ def mock1(request):
     @api {GET} /v1/mockapi/mock1 测试数据接口
     @apiVersion 1.0.0
     @apiName DataMock1
-    @apiGroup V1-Mock
+    @apiGroup Mock
 
     @apiDescription Mock 数据接口示例。
 
