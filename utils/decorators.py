@@ -204,6 +204,92 @@ class cached_property(object):
             pass
 
 
+class file_cached_property(object):
+
+    def __init__(self, func=None, key=None, ttl=0):
+        if key:
+            _logger.debug('initialing file cached property: %s', key)
+        self.key = key
+        self.ttl = ttl
+        self.file = None
+        self._cached = None
+
+        if func is not None:
+            self.__call__(func)
+
+    def __call__(self, func):
+        functools.update_wrapper(self, func)
+        self.func = func
+        if not self.key:
+            self.key = func.__name__
+            _logger.debug('initialing file cached property: %s', self.key)
+        return self
+
+    def __get__(self, obj, cls):
+        if obj is None:
+            return self
+
+        self.touch_cache_file(obj)
+        now = time.time()
+        try:
+            value, last_updated = self._cached[self.key]
+            if 0 < self.ttl < now - last_updated:
+                _logger.info('found expired cache for key: %s', self.key)
+                raise KeyError
+        except KeyError:
+            _logger.info('calculating property for key: %s', self.key)
+            value = self.func(obj)
+            self.__set__(obj, value)
+        return value
+
+    def __set__(self, obj, value):
+        _logger.info('setting cache for key: %s', self.key)
+        self.touch_cache_file(obj)
+        now = time.time()
+        self._cached[self.key] = [value, now]
+
+        # dump as string first, dump to file directly may corrupt the
+        # cache file in case of invalid json data
+        content = json.dumps(self._cached)
+        with open(self.file, 'w', encoding='utf8') as fd:
+            fd.write(content)
+
+    def __delete__(self, obj):
+        _logger.info('deleting cache for key: %s', self.key)
+        self.touch_cache_file(obj)
+        if self.key in self._cached:
+            del self._cached[self.key]
+            content = json.dumps(self._cached)
+            with open(self.file, 'w', encoding='utf8') as fd:
+                fd.write(content)
+
+    def touch_cache_file(self, obj):
+        if self._cached is not None:
+            return
+
+        self.file = cache_file = os.path.normpath(
+            os.path.abspath(obj.property_cache_file))
+        shared_name = 'cache_{}'.format(hashlib.md5(b(cache_file)).hexdigest())
+        if hasattr(self.__class__, shared_name):
+            self._cached = getattr(self.__class__, shared_name)
+            return
+
+        cache_dir = os.path.dirname(cache_file)
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir, exist_ok=True)
+        if not os.path.exists(cache_file):
+            _logger.info('touching cache file: %s', cache_file)
+            with open(cache_file, 'w', encoding='utf8') as fd:
+                fd.write('{}')
+            cache = {}
+        else:
+            with open(cache_file, 'r', encoding='utf8') as fd:
+                cache = json.load(fd)
+
+        self._cached = cache
+        setattr(self.__class__, shared_name, cache)
+
+
 class dict_property(object):
     """Property that maps to a key in a local dict-like attribute."""
 
