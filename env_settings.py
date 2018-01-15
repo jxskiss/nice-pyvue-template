@@ -16,12 +16,12 @@ import warnings
 
 # quote sign used in generated template .env file
 _QUOTE_SIGN = ''
-
 # what to do if variable not in environment: raise, warn, ignore
 _IF_ENV_MISS = 'raise'
-
 # whether override existing variable from os with values from .env file
 _OVERRIDE_IF_EXIST = True
+# whether add "export " prefix to template .env file
+_USE_PREFIX_EXPORT = True
 
 
 DEBUG = False
@@ -38,8 +38,9 @@ if __name__ == '__main__':
     # generate template content for .env file
     for _var in dir():
         if _var.isupper() and not _var.startswith('_'):
-            print('export {0}={1}{2}{1}'.format(
-                _var, _QUOTE_SIGN, str(eval(_var))))
+            print('{3}{0}={1}{2}{1}'.format(
+                _var, _QUOTE_SIGN, str(eval(_var)),
+                'export ' if _USE_PREFIX_EXPORT else ''))
 else:
     # source and check variables from .env file
     from utils import dotenv
