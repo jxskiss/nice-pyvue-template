@@ -21,10 +21,6 @@ function baseUrl () {
   return API_BASE_URL
 }
 
-// CSRF token settings for Django
-axios.defaults.xsrfCookieName = 'csrftoken';
-axios.defaults.xsrfHeaderName = 'X-CSRFToken';
-
 // Add a request interceptor
 axios.interceptors.request.use(function (config) {
   // Do something before request is sent

@@ -25,6 +25,8 @@ from six.moves import queue
 if PY2:
     from io import open
 
+_logger = logging.getLogger(__name__)
+
 
 class cached_attribute(object):
     """
@@ -205,10 +207,20 @@ class cached_property(object):
 
 
 class file_cached_property(object):
+    """
+    Decorator to cache property in json file, the resolved property
+    must be a json-encode-able value.
+
+    The cache file name will be retrieved from the object's attribute
+    "property_cache_file", an AttributeError will be raised if absent.
+
+    Multiple properties of an object will share the same cache file.
+    Multiple objects SHOULD NOT share cache file to avoid key conflicts.
+    """
 
     def __init__(self, func=None, key=None, ttl=0):
         if key:
-            _logger.debug('initialing file cached property: %s', key)
+            _logger.debug('initializing file cached property: %s', key)
         self.key = key
         self.ttl = ttl
         self.file = None
@@ -222,7 +234,7 @@ class file_cached_property(object):
         self.func = func
         if not self.key:
             self.key = func.__name__
-            _logger.debug('initialing file cached property: %s', self.key)
+            _logger.debug('initializing file cached property: %s', self.key)
         return self
 
     def __get__(self, obj, cls):
@@ -234,7 +246,7 @@ class file_cached_property(object):
         try:
             value, last_updated = self._cached[self.key]
             if 0 < self.ttl < now - last_updated:
-                _logger.info('found expired cache for key: %s', self.key)
+                _logger.debug('found expired cache for key: %s', self.key)
                 raise KeyError
         except KeyError:
             _logger.info('calculating property for key: %s', self.key)
@@ -283,6 +295,7 @@ class file_cached_property(object):
                 fd.write('{}')
             cache = {}
         else:
+            _logger.info('loading cache from file: %s', cache_file)
             with open(cache_file, 'r', encoding='utf8') as fd:
                 cache = json.load(fd)
 

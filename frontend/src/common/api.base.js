@@ -1,3 +1,73 @@
+/**
+ * Base module to encapsulate API requests.
+ *
+ * The main inspiration (and code) of this module is gotten from here:
+ *    https://juejin.im/post/5a52c9a4f265da3e2a0d6b74
+ *
+ * Python developers can use the Fabric tasks "make_js_api" and "make_rest_api"
+ * to auto generate API modules, see "fabfile.py" for details.
+ *
+ *
+ * API encapsulation example:
+ *
+ *    const tagApiDefs = {
+ *      // can be string, "GET" method will be used by default
+ *      getTag: '/tags/:id',
+ *
+ *      // can be array, [ method, url ]
+ *      getTagPageableList: [ 'GET', '/tags' ],
+ *
+ *      // or object style, { method, url }
+ *      getTagFullList: { method: 'GET', url: '/tags' },
+ *
+ *      // the "method" can be either uppercase or lowercase
+ *      createTag: [ 'post', '/tags' ],
+ *
+ *      // path param can be specified using style ":param"
+ *      updateTag: [ 'put', '/tags/:id' ],
+ *      deleteTag: [ 'delete', '/tags/:id' ]
+ *    }
+ *
+ *    const TagApiModule = makeApiModule(tagApiDefs)
+ *    export default const tagApi = new TagApiModule( { optional custom options } )
+ *
+ *
+ * API module using instruction:
+ *
+ * The api method accept zero to three arguments, for example:
+ *
+ * // GET, DELETE
+ * methodName ([params|queries:PlainObject, [queries|config:PlainObject, [config:PlainObject]]]) => :Promise
+ *
+ * // POST, PUT
+ * methodName ([params|data:PlainObject, [data|config:PlainObject, [config:PlainObject]]]) => :Promise
+ *
+ *    import tagApi from 'tagApi'
+ *
+ *    // get all tags without parameters
+ *    tagApi.getTagFullList().then(...).catch(...)
+ *
+ *    // get tag of specified ID
+ *    tagApi.getTag({ id: ID }).then(...).catch(...)
+ *
+ *    // get 20 tags at page 10
+ *    tagApi.getTagPageableList({ size: 20, page: 10 }).then(...).catch(...)
+ *
+ *    // update tag of specified ID with data
+ *    tagApi.updateTag({ id: ID }, { name: 'NewName', weight: 80 }).then(...).catch(...)
+ *
+ *    // update tag using custom request config
+ *    tagApi.updateTag(
+ *      { id: ID },
+ *      { name: 'NewName', weight: 80 },
+ *      { timeout: 1000, responseType: 'text' }
+ *    ).then(...).catch(...)
+ *
+ *
+ * You may read the link referenced above for further thoughts and explanation about the encapsulation.
+ *
+ * That's it, enjoy!
+ */
 import axios from 'axios';
 import qs from 'query-string';
 import defaultOptions from './api.config';
@@ -60,22 +130,6 @@ class BaseApiModule {
     //   ...this.defaultConfig
     // })
     this.$http = axios
-  }
-
-  get (url, config = {}) {
-    return this.$http.get(url, resolveConfig('get', this.defaultConfig, config));
-  }
-
-  post (url, data = undefined, config = {}) {
-    return this.$http.post(url, data, resolveConfig('post', this.defaultConfig, config));
-  }
-
-  put (url, data = undefined, config = {}) {
-    return this.$http.put(url, data, resolveConfig('put', this.defaultConfig, config));
-  }
-
-  delete (url, config = {}) {
-    return this.$http.delete(url, resolveConfig('delete', this.defaultConfig, config));
   }
 }
 
@@ -152,23 +206,3 @@ export default function makeApiModule (apiDefs) {
     }
   };
 }
-
-// // TagManager api module
-// const tagApiDefs = {
-//   // can be string, "GET" method will be used by default
-//   getTag: '/tags/:id',
-//   // can be array, [method, url]
-//   getTagPageableList: ['GET', '/tags'],
-//   // or object style, { method, url }
-//   getTagFullList: {method: 'GET', url: '/tags'},
-//
-//   // method can be either uppercase or lowercase
-//   createTag: ['post', '/tags'],
-//   updateTag: ['post', '/tags/:id'],
-//   deleteTag: ['delete', '/tags/:id']
-// };
-//
-// const tagApi = new (makeApiModule(tagApiDefs))({/* custom options */});
-// or
-// const TagApiModule = makeApiModule(tagApiDefs);
-// const tagApi = new TagApiModule( /* custom options */ );
