@@ -21,7 +21,7 @@ def profile(request):
     @apiPermission login
     @apiVersion 1.0.0
     @apiName UserProfile
-    @apiGroup V1-Users
+    @apiGroup Common
 
     @apiSuccess {String} code 请求状态
     @apiSuccess {String} [message] 错误消息
@@ -53,7 +53,7 @@ def login_ajax(request):
     @api {POST} /v1/common/users/login 用戶登陆
     @apiVersion 1.0.0
     @apiName UserLogin
-    @apiGroup V1-Users
+    @apiGroup Common
 
     @apiParam {String} username 用戶名
     @apiParam {String} password 密碼
@@ -90,10 +90,7 @@ def login_ajax(request):
         }
 
     """  # noqa
-    data = getattr(request, 'QUERY_DICT', None)
-    if not data:
-        data = getattr(request, 'JSON', {})
-
+    data = getattr(request, '_JSON', request.POST)
     username = data.get('username')
     password = data.get('password')
     if not all((username, password)):
@@ -117,7 +114,7 @@ def logout_ajax(request):
     @api {GET} /v1/common/users/logout 退出登陆
     @apiVersion 1.0.0
     @apiName UserLogout
-    @apiGroup V1-Users
+    @apiGroup Common
 
     @apiSuccess {String} code 请求状态
     @apiSuccess {String} [message] 错误消息

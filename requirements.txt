@@ -7,3 +7,5 @@ aioredis
 asyncpg
 tornado
 click
+fabric3
+six
