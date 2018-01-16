@@ -323,3 +323,7 @@ location LOCATION {
         location_tmpl.replace('LOCATION', location)
         .replace('UPSTREAM', upstream or backends[0])
     )
+
+
+def runtests():
+    local("python -m unittest discover -s tests -p test*.py")

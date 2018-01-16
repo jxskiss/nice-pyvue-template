@@ -18,6 +18,7 @@ import sys
 import threading
 import time
 import warnings
+import weakref
 
 from six import PY2, PY3, b, u, reraise
 from six.moves import queue
@@ -223,8 +224,6 @@ class file_cached_property(object):
             _logger.debug('initializing file cached property: %s', key)
         self.key = key
         self.ttl = ttl
-        self.file = None
-        self._cached = None
 
         if func is not None:
             self.__call__(func)
@@ -241,10 +240,10 @@ class file_cached_property(object):
         if obj is None:
             return self
 
-        self.touch_cache_file(obj)
+        self.touch_cache(obj)
         now = time.time()
         try:
-            value, last_updated = self._cached[self.key]
+            value, last_updated = obj._file_cached[self.key]
             if 0 < self.ttl < now - last_updated:
                 _logger.debug('found expired cache for key: %s', self.key)
                 raise KeyError
@@ -256,51 +255,98 @@ class file_cached_property(object):
 
     def __set__(self, obj, value):
         _logger.info('setting cache for key: %s', self.key)
-        self.touch_cache_file(obj)
+        self.touch_cache(obj)
         now = time.time()
-        self._cached[self.key] = [value, now]
+        obj._file_cached[self.key] = [value, now]
 
         # dump as string first, dump to file directly may corrupt the
         # cache file in case of invalid json data
-        content = json.dumps(self._cached)
-        with open(self.file, 'w', encoding='utf8') as fd:
+        content = json.dumps(obj._file_cached)
+        with open(obj.property_cache_file, 'w', encoding='utf8') as fd:
             fd.write(content)
 
     def __delete__(self, obj):
         _logger.info('deleting cache for key: %s', self.key)
-        self.touch_cache_file(obj)
-        if self.key in self._cached:
-            del self._cached[self.key]
-            content = json.dumps(self._cached)
-            with open(self.file, 'w', encoding='utf8') as fd:
+        self.touch_cache(obj)
+        if self.key in obj._file_cached:
+            del obj._file_cached[self.key]
+            content = json.dumps(obj._file_cached)
+            with open(obj.property_cache_file, 'w', encoding='utf8') as fd:
                 fd.write(content)
 
-    def touch_cache_file(self, obj):
-        if self._cached is not None:
+    def touch_cache(self, obj):
+        if hasattr(obj, '_file_cached'):
             return
 
-        self.file = cache_file = os.path.normpath(
+        cache_file = os.path.normpath(
             os.path.abspath(obj.property_cache_file))
-        shared_name = 'cache_{}'.format(hashlib.md5(b(cache_file)).hexdigest())
+        shared_name = self.shared_name(cache_file)
         if hasattr(self.__class__, shared_name):
-            self._cached = getattr(self.__class__, shared_name)
-            return
+            cache = getattr(self.__class__, shared_name)()
+            if cache is not None:
+                obj._file_cached = cache
+                return
 
         cache_dir = os.path.dirname(cache_file)
         if not os.path.exists(cache_dir):
-            os.makedirs(cache_dir, exist_ok=True)
+            os.makedirs(cache_dir)
         if not os.path.exists(cache_file):
             _logger.info('touching cache file: %s', cache_file)
             with open(cache_file, 'w', encoding='utf8') as fd:
                 fd.write('{}')
-            cache = {}
+            cache = self.Dict()
         else:
             _logger.info('loading cache from file: %s', cache_file)
             with open(cache_file, 'r', encoding='utf8') as fd:
-                cache = json.load(fd)
+                cache = self.Dict(json.load(fd))
 
-        self._cached = cache
-        setattr(self.__class__, shared_name, cache)
+        obj._file_cached = cache
+        setattr(self.__class__, shared_name, weakref.ref(cache))
+
+    @classmethod
+    def delete_cache(cls, obj):
+        if (getattr(obj, 'property_cache_file', None) and
+                os.path.exists(obj.property_cache_file)):
+            os.remove(obj.property_cache_file)
+        if hasattr(obj, '_file_cached'):
+            delattr(obj, '_file_cached')
+        shared_name = cls.shared_name(obj.property_cache_file)
+        if hasattr(cls, shared_name):
+            cache = getattr(cls, shared_name)
+            for k in cache:
+                del cache[k]
+
+    @classmethod
+    def reset_keys(cls, obj, *keys):
+        if not getattr(obj, 'property_cache_file', None):
+            return
+        shared_name = cls.shared_name(obj.property_cache_file)
+        if not hasattr(cls, shared_name):
+            return
+
+        cache = getattr(cls, shared_name)()
+        keys = set(cache) - set(keys)
+        if not keys:
+            # nothing to do
+            return
+
+        for k in keys:
+            del cache[k]
+        content = json.dumps(cache)
+        with open(obj.property_cache_file, 'w', encoding='utf8') as fd:
+            fd.write(content)
+
+    @staticmethod
+    def shared_name(file):
+        file = os.path.normpath(os.path.abspath(file))
+        name = 'cache_{}'.format(hashlib.md5(b(file)).hexdigest())
+        return name
+
+    class Dict(dict):
+        """
+        Subclass to workaround weak reference to built-in type dict.
+        """
+        pass
 
 
 class dict_property(object):
