@@ -4,7 +4,7 @@ import sys
 import warnings
 import six
 
-__all__ = ['log', 'config_logger', 'suppress_logger']
+__all__ = ['log', 'config_logger', 'suppress_logger', 'LoggingMixin']
 
 # Tornado's beautiful logging format
 _FORMAT = '[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d] %(message)s'
@@ -77,3 +77,22 @@ def suppress_logger(name, level):
         name, logging.getLevelName(level))
     warnings.warn(msg, UserWarning, 2)
     logging.getLogger(name).setLevel(level)
+
+
+class LoggingMixin(object):
+    """
+    Convenience super-class to have a logger configured with the class name
+    """
+
+    # The log property is the de-facto standard in most programming languages
+    @property
+    def log(self):
+        try:
+            return self._log
+        except AttributeError:
+            self._log = logging.root.getChild(
+                '{}.{}'.format(
+                    self.__class__.__module__,
+                    self.__class__.__name__
+                ))
+            return self._log
