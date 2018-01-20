@@ -24,21 +24,18 @@ class AbstractKVStore(models.Model):
     def get(cls, key, default=None):
         try:
             obj = cls.objects.get(k=key)
-            if obj.expire_at < timezone.now():
-                return obj.v
-            return default
+            if obj.expire_at and obj.expire_at < timezone.now():
+                return default
+            return obj.v
         except cls.DoesNotExist:
             return default
 
     @classmethod
     def get_json(cls, key, default=None):
-        try:
-            obj = cls.objects.get(k=key)
-            if obj.expire_at and obj.expire_at < timezone.now():
-                return default
-            return json.loads(obj.v)
-        except cls.DoesNotExist:
-            return default
+        value = cls.get(key, default=default)
+        if value is not default:
+            value = json.loads(value)
+        return value
 
     @classmethod
     def set(cls, key, value, expire_at=None):
@@ -49,9 +46,7 @@ class AbstractKVStore(models.Model):
     @classmethod
     def set_json(cls, key, value, expire_at=None):
         value = json.dumps(value)
-        obj, created = cls.objects.update_or_create(
-            k=key, defaults={'v': value, 'expire_at': expire_at})
-        return True
+        return cls.set(key, value, expire_at=expire_at)
 
     @classmethod
     def del_key(cls, key):

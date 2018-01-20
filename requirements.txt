@@ -9,3 +9,5 @@ tornado
 click
 fabric3
 six
+peewee
+peewee_async
