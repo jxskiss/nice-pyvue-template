@@ -4,7 +4,7 @@
 <template>
     <div class="main" :class="{'main-hide-text': shrink}">
         <div class="sidebar-menu-con" :style="{width: shrink?'60px':'200px', overflow: shrink ? 'visible' : 'auto'}">
-            <shrinkable-menu 
+            <shrinkable-menu
                 :shrink="shrink"
                 :menu-list="menuList">
                 <div slot="top" class="logo-con">
@@ -29,6 +29,7 @@
                                     <Icon type="arrow-down-b"></Icon>
                                 </a>
                                 <DropdownMenu slot="list">
+                                    <DropdownItem name="adminpage"><a href="/admin/" target="_blank">管理后台</a></DropdownItem>
                                     <DropdownItem name="loginout" divided>退出登录</DropdownItem>
                                 </DropdownMenu>
                             </Dropdown>
@@ -72,9 +73,12 @@ export default {
             this.shrink = !this.shrink;
         },
         handleClickUserDropdown (name) {
-            this.$router.push({
-                name: 'login'
-            });
+            if (name === 'loginout') {
+                this.$store.dispatch('logout');
+                this.$router.push({
+                    name: 'login'
+                });
+            }
         }
     },
     mounted () {

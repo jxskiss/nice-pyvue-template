@@ -66,6 +66,7 @@ export default {
                         password: this.form.password
                     }).then(function (resp) {
                         Cookies.set('user', resp.data.data.username)
+                        localStorage.set('lastCheck', (new Date()).getTime());
                         let next = vm.$route.query.redirect;
                         if (next) {
                             vm.$router.push({ path: next })
