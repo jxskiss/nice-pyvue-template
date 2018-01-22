@@ -12,6 +12,7 @@ define('debug', type=bool, default=False, help='run server in debug mode',
        callback=lambda debug: os.environ.update({'DEBUG': str(debug)}))
 define('uvloop', type=bool, default=True, help='run server with uvloop')
 define('django', type=bool, default=False, help='enable django integration')
+define('django_threads', type=int, default=0, help='django thread pool size')
 define('port', type=int, default=8000, help='listening port')
 define('addr', type=str, default='0.0.0.0', help='listening address')
 
@@ -70,14 +71,15 @@ def main():
         ]
 
         # serve django admin pages and static files in debug mode
+        from handlers.with_django import FallbackHandler
         import django.core.wsgi
         django_wsgi = wsgi.WSGIContainer(
             django.core.wsgi.get_wsgi_application())
         django_handlers = [
-            (r'^/admin/.*$', web.FallbackHandler, dict(fallback=django_wsgi)),
-            (r'^/static/.*$', web.FallbackHandler, dict(fallback=django_wsgi)),
+            (r'^/admin/.*$', FallbackHandler, dict(fallback=django_wsgi)),
+            (r'^/static/.*$', FallbackHandler, dict(fallback=django_wsgi)),
             # fallback any not matched request to django
-            (r'^/.*$', web.FallbackHandler, dict(fallback=django_wsgi))
+            (r'^/.*$', FallbackHandler, dict(fallback=django_wsgi))
         ]
         handlers += django_handlers
 
