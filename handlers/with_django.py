@@ -19,7 +19,7 @@ class WithDjangoHandler(RequestHandler):
 
     _executor = None
 
-    # FIXME: run_on_executor is thread-unsafe, is there any pitfalls?
+    # FIXME: run_on_executor is thread-unsafe, is there pitfalls?
     @property
     def executor(self):
         executor = WithDjangoHandler._executor
