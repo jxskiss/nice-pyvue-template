@@ -99,10 +99,7 @@ def main():
                  options.addr, options.port, serving_mode, django_mode)
     app.listen(options.port, options.addr)
 
-    if options.uvloop:
-        asyncio.get_event_loop().run_forever()
-    else:
-        ioloop.IOLoop.instance().start()
+    ioloop.IOLoop.instance().start()
 
 
 if __name__ == '__main__':
