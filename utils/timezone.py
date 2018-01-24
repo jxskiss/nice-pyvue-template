@@ -53,13 +53,14 @@ def localdate(value=None, timezone=None):
 
 def now(tz=None):
     """
-    Returns an aware or naive datetime.datetime, depending on param tz.
+    Returns an aware datetime.datetime with utc timezone.
+    For naive datetime, please use the standard datetime.now() function.
     """
+    # timeit shows that datetime.now(tz=utc) is 24% slower
+    value = datetime.utcnow().replace(tzinfo=pytz.utc)
     if tz:
-        # timeit shows that datetime.now(tz=utc) is 24% slower
-        return datetime.utcnow().replace(tzinfo=pytz.utc)
-    else:
-        return datetime.now()
+        value = value.astimezone(tz)
+    return value
 
 
 # By design, these four functions don't perform any checks on their arguments.
