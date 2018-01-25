@@ -1,10 +1,10 @@
 # -*- coding:utf-8 -*-
-import pandas as pd
+import signal
 import threading
 import time
 
 
-def sql_query_with_timeout(*args, timeout=0, interval=1, **kwargs):
+def sql_query_may_timeout(*args, timeout=0, interval=1, **kwargs):
     """Kill long-running query doesn't finish within given time.
     When timeout happens, there will be a dangled backend daemon thread
     keep running the query, so this is only useful when you just exit
@@ -14,6 +14,8 @@ def sql_query_with_timeout(*args, timeout=0, interval=1, **kwargs):
         1. https://stackoverflow.com/a/16494559
         2. https://docs.python.org/2/library/threading.html
     """
+    import pandas as pd
+
     if timeout <= 0:
         return pd.read_sql_query(*args, **kwargs)
 
@@ -48,3 +50,27 @@ def sql_query_with_timeout(*args, timeout=0, interval=1, **kwargs):
                          'something wrong')
 
     return result[0]
+
+
+class timeout(object):
+    """
+    To be used in a ``with`` block and timeout its content.
+    Can only be used in main thread.
+
+    :raise TimeoutError: in case of operation timeout
+    :raise ValueError: in case timeout can't be used in current context
+    """
+
+    def __init__(self, seconds=60, error_message='Timeout'):
+        self.seconds = seconds
+        self.error_message = error_message
+
+    def handle_timeout(self, signum, frame):
+        raise TimeoutError(self.error_message)
+
+    def __enter__(self):
+        signal.signal(signal.SIGALRM, self.handle_timeout)
+        signal.alarm(self.seconds)
+
+    def __exit__(self, type, value, traceback):
+        signal.alarm(0)
