@@ -5,18 +5,22 @@ Using together with other "utils.tornado.*" utilities is preferred, though
 it can be used independently also.
 """
 from tornado import ioloop, gen
-from tornado.log import app_log
+from tornado.httpclient import AsyncHTTPClient
+from tornado.log import gen_log
 from tornado.options import options
-from tornado.web import Application, RequestHandler
+from tornado.web import (Application, RequestHandler, StaticFileHandler,
+                         RedirectHandler, ErrorHandler)
 import functools
 import inspect
+import time
 import warnings
 
 from utils.tornado.api import ApiRequestHandler
 from utils.tornado.scheduler import scheduler
 
 __all__ = [
-    'options', 'scheduler', 'service', 'run', 'route',
+    'options', 'scheduler', 'service', 'health', 'heartbeat', 'run',
+    'route', 'static', 'redirect', 'error',
     'get', 'post', 'put', 'delete', 'patch'
 ]
 
@@ -47,7 +51,7 @@ def service(cls):
         handler_class = type(handler_name, bases, {'__module__': cls.__module__})
         for m, f in methods.items():
             setattr(handler_class, m, f)
-        _handlers[url] = handler_class
+        _handlers[url] = (url, handler_class)
         _routes.pop(url)
 
     return cls
@@ -72,7 +76,42 @@ get, post, put, delete, patch = map(
         (route, ) * 5, ("GET", "POST", "PUT", "DELETE", "PATCH")))
 
 
-def run():
+def static(url, path):
+    _handlers[url] = (url, StaticFileHandler, dict(path=path))
+
+
+def redirect(url, to):
+    _handlers[url] = (url, RedirectHandler, dict(url=to))
+
+
+def error(url, status_code):
+    _handlers[url] = (url, ErrorHandler, dict(status_code=status_code))
+
+
+def health(url=r'^/health$', text='ok'):
+
+    @service
+    class HealthyService(object):
+        @get(url)
+        def health(self):
+            self.finish(text)
+
+    return HealthyService
+
+
+def heartbeat(url, interval=60, random_sleep=5, raise_error=False, **kwargs):
+
+    @scheduler(time.time() + 1, '%sseconds' % interval, random_sleep)
+    async def beat():
+        gen_log.info('sending heartbeat to: %s', url)
+        client = AsyncHTTPClient()
+        resp = await client.fetch(url, raise_error=raise_error, **kwargs)
+        if resp.code != 200:
+            gen_log.warning('heartbeat failed with status code %s: %s',
+                            resp.code, resp.body.decode())
+
+
+def run(**app_kwargs):
     options.parse_command_line()
 
     if options.uvloop:
@@ -91,14 +130,15 @@ def run():
     if not _handlers:
         raise RuntimeError('No handler registered, make sure they are defined properly!')
     for svc in _services:
-        app_log.debug('Registered service: %r', svc)
+        gen_log.debug('Registered service: %r', svc)
     for url, handler in _handlers.items():
-        app_log.debug('Registered handler: %r, %r, subclass of: %r',
-                      url, handler, handler.mro()[1:])
+        gen_log.debug('Registered handler: %r, %r, subclass of: %r',
+                      url, handler, handler[1].mro()[1:])
 
     app = Application(
-        handlers=_handlers.items(),
-        debug=options.debug
+        handlers=_handlers.values(),
+        debug=options.debug,
+        **app_kwargs
     )
 
     app.listen(options.port, options.addr)
@@ -110,10 +150,14 @@ def run():
 if __name__ == '__main__':
     @service
     class Service(object):
-        @get('^/hello')
+        @get('^/hello$')
         async def hello(self):
             await gen.sleep(0.001)
             name = self.get_argument('name', '')
             self.finish('hello, %s!' % (name or 'anonymous'))
+
+    redirect('/world', '/hello')
+    health('/health', 'ok')
+    heartbeat('http://127.0.0.1:%d/health' % options.port)
 
     run()
