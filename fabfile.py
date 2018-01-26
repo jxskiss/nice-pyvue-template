@@ -202,12 +202,11 @@ def make_js_api():
             }
 
     # redirect Fabric's output to stderr
-    stdout_bak = sys.stdout
     sys.stdout = sys.stderr
     if api_defs:
-        stdout_bak.write(_JS_API_HEADER)
+        sys.__stdout__.write(_JS_API_HEADER)
     for group, defs in api_defs.items():
-        stdout_bak.write(_JS_MODULE_TMPL.format(
+        sys.__stdout__.write(_JS_MODULE_TMPL.format(
             module=group, defs=json.dumps(defs, indent=2)))
 
 
@@ -250,10 +249,9 @@ def make_rest_api(resource, path_prefix, plural=None):
     module = module[1].lower() + module[1:]
 
     # redirect Fabric's output to stderr
-    stdout_bak = sys.stdout
     sys.stdout = sys.stderr
-    stdout_bak.write(_JS_API_HEADER)
-    stdout_bak.write(_JS_MODULE_TMPL.format(
+    sys.__stdout__.write(_JS_API_HEADER)
+    sys.__stdout__.write(_JS_MODULE_TMPL.format(
         module=module, defs=json.dumps(api_defs, indent=2)))
 
 
@@ -276,9 +274,8 @@ def ngx_spa_loc(page=''):
     }
     """
     # redirect Fabric's output to stderr
-    stdout_bak = sys.stdout
     sys.stdout = sys.stderr
-    stdout_bak.write(tmpl.replace('PAGE', page))
+    sys.__stdout__.write(tmpl.replace('PAGE', page))
 
 
 def make_proxy_loc(location, upstream, *backends):
@@ -291,10 +288,9 @@ upstream UPSTREAM {
 }
 """
     # redirect Fabric's output to stderr
-    stdout_bak = sys.stdout
     sys.stdout = sys.stderr
     if upstream and backends:
-        stdout_bak.write(
+        sys.__stdout__.write(
             upstream_tmpl.replace('UPSTREAM', upstream)
             .replace('SERVERS', ';\n    server '.join(backends))
         )
@@ -319,11 +315,11 @@ location LOCATION {
     proxy_pass http://UPSTREAM;
 }
 """
-    stdout_bak.write(
+    sys.__stdout__.write(
         location_tmpl.replace('LOCATION', location)
         .replace('UPSTREAM', upstream or backends[0])
     )
 
 
-def runtests():
-    local("python -m unittest discover -s tests -p test*.py")
+def runtests(pattern='test*.py'):
+    local("python -m unittest discover -s tests -p %s" % pattern)

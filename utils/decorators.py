@@ -661,13 +661,12 @@ class print_to_log(_LogDecorator):
     def __call__(self, func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            stdout_bak = sys.stdout
             sys.stdout = self
             try:
                 return func(*args, **kwargs)
             finally:
                 self.flush()
-                sys.stdout = stdout_bak
+                sys.stdout = sys.__stdout__
 
         return wrapper
 
@@ -691,6 +690,10 @@ class print_to_log(_LogDecorator):
         if output:
             self.logger.log(self.level, output)
             self.buf = []
+
+    def isatty(self):
+        """For compatibility."""
+        return False
 
 
 def singleton(cls):

@@ -1,10 +1,15 @@
 # -*- coding:utf-8 -*-
+from __future__ import absolute_import, print_function, unicode_literals
+from contextlib import contextmanager
 import logging
 import sys
 import warnings
 import six
 
-__all__ = ['log', 'config_logger', 'suppress_logger', 'LoggerMixin']
+__all__ = [
+    'log', 'config_logger', 'suppress_logger', 'LoggerMixin',
+    'StreamLogWriter', 'RedirectStdHandler', 'log_stdout', 'log_stderr',
+]
 
 # Tornado's beautiful logging format
 _FORMAT = '[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d] %(message)s'
@@ -96,3 +101,79 @@ class LoggerMixin(object):
                     self.__class__.__name__
                 ))
             return self._log
+
+
+class StreamLogWriter(object):
+    """Allows to redirect stdout and stderr to logger."""
+    encoding = False
+
+    def __init__(self, logger, level):
+        self.logger = logger
+        self.level = level
+        self._buffer = []
+
+    def write(self, message):
+        self._buffer.append(message)
+        if message.endswith('\n'):
+            self.flush()
+
+    def flush(self):
+        """Ensure all logging output has been flushed."""
+        output = ''.join(self._buffer).rstrip()
+        if output:
+            self.logger.log(self.level, output)
+            self._buffer = []
+
+    def isatty(self):
+        """
+        Indicate the fd is not connected to a tty(-like) device.
+        For compatibility reasons.
+        """
+        return False
+
+
+class RedirectStdHandler(logging.StreamHandler):
+    """
+    This class is like a StreamHandler using stderr/stdout, but always
+    use whatever stderr/stdout is currently set to rather than the
+    value of sys.stderr/sys.stdout at handler construction time.
+    """
+    def __init__(self, stream):
+        if not isinstance(stream, six.string_types):
+            raise ValueError("Cannot use file like objects. Use 'stdout' or "
+                             "'stderr' as str and without 'ext://'.")
+        self._use_stderr = True
+        if 'stdout' in stream:
+            self._use_stderr = False
+
+        # StreamHandler tries to set self.stream
+        logging.Handler.__init__(self)
+
+    @property
+    def stream(self):
+        if self._use_stderr:
+            return sys.stderr
+
+        return sys.stdout
+
+
+@contextmanager
+def log_stdout(logger, level):
+    writer = StreamLogWriter(logger, level)
+    try:
+        sys.stdout = writer
+        yield
+    finally:
+        writer.flush()
+        sys.stdout = sys.__stdout__
+
+
+@contextmanager
+def log_stderr(logger, level):
+    writer = StreamLogWriter(logger, level)
+    try:
+        sys.stderr = writer
+        yield
+    finally:
+        writer.flush()
+        sys.stderr = sys.__stderr__
