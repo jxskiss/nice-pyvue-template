@@ -1,7 +1,14 @@
 # -*- coding:utf-8 -*-
 """
-Candy utility to define and parse CLI arguments, borrowed from
-Apache Airflow's bin/cli module.
+Candy utility to define and parse CLI arguments, inspired by the bin/cli
+module from Apache Airflow (incubator) project.
+
+This module is designed for small and medium command line application usage,
+distributed (in different files) args and sub-commands definition are supported.
+For simple use case without needs for sub-command, tornado.options
+module is recommended if you are already using tornado.
+If you are writing a large complicate application, google's open source
+library abseil-py will give you much more help than this :-)
 """
 
 from __future__ import absolute_import, print_function
@@ -16,17 +23,26 @@ Arg.__new__.__defaults__ = (None, ) * 7
 
 class CLI(object):
     args = {}
+    flags = set()
     subparsers = []
 
     @classmethod
     def arg(cls, arg, flags=None, help=None, action=None, default=None, nargs=None,
             type=None, choices=None, metavar=None):
         """See argparse for parameters document."""
+        if arg in cls.args:
+            raise ValueError('argument %r has already been defined' % arg)
+
         if flags is None:
             flags = ('--%s' % arg, )
         elif isinstance(flags, str):
             flags = (flags, )
+        if cls.flags & set(flags):
+            raise ValueError('flags %r has already been used' % flags)
+        cls.flags.update(flags)
+
         cls.args[arg] = Arg(flags, help, action, default, nargs, type, choices, metavar)
+        return arg
 
     @classmethod
     def subcommand(cls, help, args):
@@ -61,19 +77,33 @@ class CLI(object):
             sp.set_defaults(func=sub['func'])
         return parser
 
+    @classmethod
+    def run(cls):
+        parser = cls.get_parser()
+        args = parser.parse_args()
+        args.func(args)
 
+
+arg = CLI.arg
+subcommand = CLI.subcommand
 get_parser = CLI.get_parser
+run = CLI.run
 
 
 if __name__ == '__main__':
-    CLI.arg('some_id', type=int, help='example int id argument')
-    CLI.arg('text', help='example text argument')
+    arg('some_id', type=int, help='example int id argument')
+    arg('text', help='example text argument')
 
-    @CLI.subcommand(help='example sub-command', args=('some_id', 'text'))
+    # NOTE: the argument sub defined below is no difference with others
+    # defined above, argument can be referenced by any sub-command
+    # no matter where is it defined.
+    # Arguments shared by multiple sub-commands should be defined globally.
+    @subcommand(help='example sub-command',
+                args=('some_id', 'text',
+                      arg('sub', help='arg defined with subcommand')))
     def example(args):
         print('some_id:', args.some_id)
         print('text:', args.text)
+        print('sub:', args.sub)
 
-    parser = get_parser()
-    args = parser.parse_args()
-    args.func(args)
+    run()
