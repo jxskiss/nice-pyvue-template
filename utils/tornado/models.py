@@ -6,9 +6,29 @@ import datetime
 import hashlib
 import json
 import os
+import threading
 
 
-def _make_salt(size=16):
+def fast_urandom16(urandom=[], lock=threading.RLock()):
+    """
+    This is 4x faster than calling os.urandom(16) and prevents
+    the "too many files open" issue with concurrent access to os.urandom()
+    """
+    try:
+        return urandom.pop()
+    except IndexError:
+        try:
+            lock.acquire()
+            ur = os.urandom(16 * 1024)
+            urandom.extend(ur[i:i + 16] for i in range(16, 1024 * 16, 16))
+            return ur[0:16]
+        finally:
+            lock.release()
+
+
+def make_salt(size=16):
+    if size == 16:
+        return fast_urandom16().hex()
     return os.urandom(size).hex()
 
 
@@ -24,7 +44,7 @@ class AbstractUser(object):
     date_joined = DateTimeField(default=datetime.datetime.now)
     username = CharField(unique=True)
     password = CharField()
-    salt = CharField(default=_make_salt)
+    salt = CharField(default=make_salt)
     email = CharField(default='')
     phone = CharField(default='')
     first_name = CharField(default='')
@@ -56,7 +76,7 @@ class AbstractUser(object):
     async def set_password(self, raw_password):
         update_fields = ['password']
         if not self.salt:
-            self.salt = _make_salt()
+            self.salt = make_salt()
             update_fields.append('salt')
         self.password = self.get_password(raw_password, self.salt)
         await self.manager.update(self, only=update_fields)
@@ -65,7 +85,7 @@ class AbstractUser(object):
     async def create_user(cls, username, password,
                           email='', phone='', first_name='', last_name='',
                           is_staff=False, is_superuser=False):
-        salt = _make_salt()
+        salt = make_salt()
         password = cls.get_password(password, salt)
         params = {
             'username': username,

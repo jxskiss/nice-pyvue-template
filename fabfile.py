@@ -278,7 +278,7 @@ def ngx_spa_loc(page=''):
     sys.__stdout__.write(tmpl.replace('PAGE', page))
 
 
-def make_proxy_loc(location, upstream, *backends):
+def ngx_proxy_loc(location, upstream, *backends):
     """
     Make Nginx proxy location config for upstream.
     """
@@ -297,12 +297,13 @@ upstream UPSTREAM {
 
     location_tmpl = """
 location LOCATION {
-    # client_max_body_size    10m;
+    # client_max_body_size    50m;
 
     proxy_set_header Host $http_host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Scheme $scheme;
     # proxy_set_header X-Forwarded-Ssl on;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
@@ -319,6 +320,10 @@ location LOCATION {
         location_tmpl.replace('LOCATION', location)
         .replace('UPSTREAM', upstream or backends[0])
     )
+
+
+def ngx_https():
+    print('Please see contrib/https/nginx.conf for example and details.')
 
 
 def runtests(pattern='test*.py'):

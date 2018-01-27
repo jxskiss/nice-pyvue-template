@@ -162,4 +162,5 @@ if __name__ == '__main__':
     options.add_parse_callback(
         lambda: heartbeat('http://127.0.0.1:%d/health' % options.port))
 
+    # if using behind reverse proxy, pass xheaders=True
     run()

@@ -1,10 +1,7 @@
 # -*- coding:utf-8 -*-
 from datetime import datetime, date, timedelta
-import dateutil.parser
 import os
 import pytz
-
-parse = dateutil.parser.parse
 
 
 def get_current_timezone():

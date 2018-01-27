@@ -97,7 +97,7 @@ def main():
     django_mode = 'enabled' if options.django else 'disabled'
     gen_log.warn('starting server at %s:%s in %s mode with django %s...',
                  options.addr, options.port, serving_mode, django_mode)
-    app.listen(options.port, options.addr)
+    app.listen(options.port, options.addr, xheaders=True)
 
     ioloop.IOLoop.instance().start()
 

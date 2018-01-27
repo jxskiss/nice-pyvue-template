@@ -2,6 +2,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 from contextlib import contextmanager
 import logging
+import logging.handlers
 import sys
 import warnings
 import six
@@ -12,9 +13,8 @@ __all__ = [
 ]
 
 # Tornado's beautiful logging format
-_FORMAT = '[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d] %(message)s'
-_DATE_FORMAT = '%y%m%d %H:%M:%S'
-_LOG_FORMATTER = logging.Formatter(_FORMAT, _DATE_FORMAT)
+FORMAT = '[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d] %(message)s'
+DATE_FORMAT = '%y%m%d %H:%M:%S'
 
 # global logger
 log = logging.getLogger(__name__)
@@ -48,8 +48,9 @@ def config_logger(func=None,
 
         if enable_root:
             logging.basicConfig(level=root_level or level,
-                                format=_FORMAT, datefmt=_DATE_FORMAT)
+                                format=FORMAT, datefmt=DATE_FORMAT)
 
+        formatter = logging.Formatter(FORMAT, DATE_FORMAT)
         log.setLevel(level)
         if filename is sys.stderr:
             # if root logger has already been configured, simply propagate
@@ -58,14 +59,14 @@ def config_logger(func=None,
                 pass
             else:
                 handler = logging.StreamHandler(sys.stderr)
-                handler.setFormatter(_LOG_FORMATTER)
+                handler.setFormatter(formatter)
                 log.addHandler(handler)
         else:
             handler = logging.handlers.RotatingFileHandler(
                 filename,
                 maxBytes=max_mb * 1024 * 1024,
                 backupCount=backup_count)
-            handler.setFormatter(_LOG_FORMATTER)
+            handler.setFormatter(formatter)
             log.addHandler(handler)
 
         log._configured = True

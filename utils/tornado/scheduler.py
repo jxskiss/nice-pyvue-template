@@ -4,13 +4,13 @@ import numbers
 import random
 import re
 import time
+import dateutil.parser
 from tornado.ioloop import PeriodicCallback
-
-from utils import timezone
 
 
 def _to_timestamp(dt):
-    if timezone.is_aware(dt):
+    # convert timezone aware value to local timestamp
+    if dt.utcoffset() is not None:
         t = time.mktime(dt.utctimetuple()) - time.timezone
     else:
         t = time.mktime(dt.timetuple())
@@ -49,7 +49,7 @@ class ScheduledCallback(PeriodicCallback):
         elif isinstance(start_at, numbers.Real):
             self._start_at_timestamp = start_at
         elif isinstance(start_at, str):
-            start_at = timezone.parse(start_at)
+            start_at = dateutil.parser.parse(start_at)
             self._start_at_timestamp = _to_timestamp(start_at)
         else:
             raise TypeError("Unsupported start_at type: %r" % start_at)
@@ -361,12 +361,16 @@ class scheduler(object):
     """
     _tasks = []
 
-    def __init__(self, start_at=None, every=None, random_sleep=None,
-                 cron=None, callback_time=None):
+    def __init__(self, start_at=None, every=None,  # ScheduledCallback
+                 cron=None,  # CronCallback
+                 callback_seconds=None,  # PeriodicCallback
+                 random_sleep=None,  # shared params
+                 ):
         """
         See `ScheduledCallback` for doc of params start_at and every.
         See `CronCallback` for doc of param cron.
-        See `PeriodicCallback` for doc of param callback_time (milliseconds).
+        See `PeriodicCallback` for doc of param callback_seconds:
+            callback_time = callback_seconds * 1000
         """
         if start_at and every:
             self.sch_class = ScheduledCallback
@@ -375,11 +379,12 @@ class scheduler(object):
         elif cron:
             self.sch_class = CronCallback
             self.sch_kwargs = {'cron': cron, 'random_sleep': random_sleep}
-        elif callback_time:
+        elif callback_seconds:
             self.sch_class = PeriodicCallback
-            self.sch_kwargs = {'callback_time': callback_time}
+            self.sch_kwargs = {'callback_time': callback_seconds * 1000}
         else:
-            raise ValueError('Either (start_at, every) or cron must be given')
+            raise ValueError('Either (start_at, every) or cron or '
+                             'callback_seconds must be given')
 
     def __call__(self, task):
         self._tasks.append(self.sch_class(task, **self.sch_kwargs))
