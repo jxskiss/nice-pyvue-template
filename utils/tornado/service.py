@@ -98,7 +98,8 @@ def health(url=r'^/health$', text='ok'):
 
 def heartbeat(url, interval=60, random_sleep=5, raise_error=False, **kwargs):
 
-    @scheduler(time.time() + 1, '%sseconds' % interval, random_sleep)
+    @scheduler(start_at=time.time() + 1, every='%sseconds' % interval,
+               random_sleep=random_sleep)
     async def beat():
         gen_log.info('sending heartbeat to: %s', url)
         client = AsyncHTTPClient()
@@ -156,7 +157,8 @@ if __name__ == '__main__':
     redirect('/world', '/hello')
     health('/health', 'ok')
 
-    # before calling run(), options are not prepared
+    # heartbeat('http://www.example.com/heartbeat')
+    # To self-beat, before calling run(), options are not prepared
     options.add_parse_callback(
         lambda: heartbeat('http://127.0.0.1:%d/health' % options.port))
 
