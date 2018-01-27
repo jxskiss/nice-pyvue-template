@@ -95,8 +95,6 @@ def health(url=r'^/health$', text='ok'):
         def health(self):
             self.finish(text)
 
-    return HealthyService
-
 
 def heartbeat(url, interval=60, random_sleep=5, raise_error=False, **kwargs):
 
@@ -106,8 +104,8 @@ def heartbeat(url, interval=60, random_sleep=5, raise_error=False, **kwargs):
         client = AsyncHTTPClient()
         resp = await client.fetch(url, raise_error=raise_error, **kwargs)
         if resp.code != 200:
-            gen_log.warning('heartbeat failed with status code %s: %s',
-                            resp.code, resp.body.decode())
+            gen_log.warning('heartbeat failed with status code %s: %r',
+                            resp.code, resp.error)
 
 
 def run(**app_kwargs):
@@ -157,6 +155,9 @@ if __name__ == '__main__':
 
     redirect('/world', '/hello')
     health('/health', 'ok')
-    heartbeat('http://127.0.0.1:%d/health' % options.port)
+
+    # before calling run(), options are not prepared
+    options.add_parse_callback(
+        lambda: heartbeat('http://127.0.0.1:%d/health' % options.port))
 
     run()

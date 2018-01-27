@@ -23,32 +23,39 @@ class ApiJSONEncoder(json.JSONEncoder):
     JSONEncoder subclass that knows how to encode date/time, decimal
     types and UUIDs.
     """
-    def default(self, o):
-        # See "Date Time String Format" in the ECMA-262 specification.
-        if isinstance(o, datetime.datetime):
-            r = o.isoformat()
-            if o.microsecond:
-                r = r[:23] + r[26:]
-            if r.endswith('+00:00'):
-                r = r[:-6] + 'Z'
-            return r
-        elif isinstance(o, datetime.date):
-            return o.isoformat()
-        elif isinstance(o, datetime.time):
-            if o.utcoffset() is not None:  # timezone aware
-                raise ValueError("JSON can't represent timezone-aware times.")
-            r = o.isoformat()
-            if o.microsecond:
-                r = r[:12]
-            return r
-        elif isinstance(o, datetime.timedelta):
-            return self.duration_iso_string(o)
-        elif isinstance(o, decimal.Decimal):
-            return str(o)
-        elif isinstance(o, uuid.UUID):
-            return str(o)
-        else:
-            return super(ApiJSONEncoder, self).default(o)
+    def default(self, obj):
+        try:
+            return super().default(obj)
+        except TypeError:
+            # See "Date Time String Format" in the ECMA-262 specification.
+            if isinstance(obj, datetime.datetime):
+                r = obj.isoformat()
+                if obj.microsecond:
+                    r = r[:23] + r[26:]
+                if r.endswith('+00:00'):
+                    r = r[:-6] + 'Z'
+                return r
+            elif isinstance(obj, datetime.date):
+                return obj.isoformat()
+            elif isinstance(obj, datetime.time):
+                if obj.utcoffset() is not None:  # timezone aware
+                    six.raise_from(ValueError(
+                        "JSON can't represent timezone-aware times."), None)
+                r = obj.isoformat()
+                if obj.microsecond:
+                    r = r[:12]
+                return r
+            elif isinstance(obj, datetime.timedelta):
+                return self.duration_iso_string(obj)
+            elif isinstance(obj, decimal.Decimal):
+                return str(obj)
+            elif isinstance(obj, uuid.UUID):
+                return str(obj)
+            else:
+                r = self._try_numpy(obj)
+                if r is not None:
+                    return r
+            raise
 
     @classmethod
     def duration_iso_string(cls, duration):
@@ -77,6 +84,27 @@ class ApiJSONEncoder(json.JSONEncoder):
         minutes = minutes % 60
 
         return days, hours, minutes, seconds, microseconds
+
+    @staticmethod
+    def _try_numpy(obj):
+        try:
+            # Not all applications use numpy
+            import numpy as np
+            if isinstance(
+                obj, (np.int_, np.intc, np.intp, np.int8, np.int16,
+                      np.int32, np.int64, np.uint8, np.uint16,
+                      np.uint32, np.uint64)):
+                return int(obj)
+            elif isinstance(obj, np.bool_):
+                return bool(obj)
+            elif isinstance(
+                obj, (np.float_, np.float16, np.float32, np.float64,
+                      np.complex_, np.complex32, np.complex64,
+                      np.complex128)):
+                return float(obj)
+            return None
+        except ImportError:
+            return None
 
 
 class ApiRequestHandler(RequestHandler):
