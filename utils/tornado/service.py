@@ -15,6 +15,16 @@ import inspect
 import time
 import warnings
 
+# uvloop should be setup on the interpreter startup to avoid tricky problems
+try:
+    import uvloop
+    import asyncio
+    from tornado.platform.asyncio import AsyncIOMainLoop
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    AsyncIOMainLoop().install()
+except ImportError:
+    warnings.warn("Cannot import asyncio/uvloop, fallback to Tornado's IOLoop")
+
 from utils.tornado.api import ApiRequestHandler
 from utils.tornado.scheduler import scheduler
 
@@ -26,7 +36,6 @@ __all__ = [
 
 
 options.define('debug', type=bool, default=False, help='run server in debug mode')
-options.define('uvloop', type=bool, default=True, help='run server with uvloop')
 options.define('port', type=int, default=8000, help='listening port')
 options.define('addr', type=str, default='0.0.0.0', help='listening address')
 
@@ -112,26 +121,17 @@ def heartbeat(url, interval=60, random_sleep=5, raise_error=False, **kwargs):
 def run(**app_kwargs):
     options.parse_command_line()
 
-    if options.uvloop:
-        from tornado.platform.asyncio import AsyncIOMainLoop
-        try:
-            import asyncio
-            import uvloop
-            asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-            AsyncIOMainLoop().instance()
-        except ImportError:
-            options.uvloop = False
-            warnings.warn("Cannot import asyncio/uvloop, fallback to Tornado's IOLoop")
-
     if not _services:
-        raise RuntimeError('No service registered, make sure they are defined properly!')
+        raise RuntimeError(
+            'No service registered, make sure they are defined properly!')
     if not _handlers:
-        raise RuntimeError('No handler registered, make sure they are defined properly!')
+        raise RuntimeError(
+            'No handler registered, make sure they are defined properly!')
     for svc in _services:
         gen_log.debug('Registered service: %r', svc)
     for url, handler, *_ in _handlers:
         gen_log.debug('Registered handler: %r, %r, subclass of: %r',
-                      url, handler, handler.mro()[1:])
+                      url, handler, handler.mro()[1])
 
     app = Application(
         handlers=_handlers,
@@ -142,7 +142,7 @@ def run(**app_kwargs):
     app.listen(options.port, options.addr)
     scheduler.start_all()
 
-    ioloop.IOLoop.current().start()
+    ioloop.IOLoop.instance().start()
 
 
 if __name__ == '__main__':
@@ -163,4 +163,5 @@ if __name__ == '__main__':
         lambda: heartbeat('http://127.0.0.1:%d/health' % options.port))
 
     # if using behind reverse proxy, pass xheaders=True
+    # run(xheaders=True)
     run()

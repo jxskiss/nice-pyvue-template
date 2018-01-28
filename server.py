@@ -1,38 +1,35 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-
 import os
+import warnings
 from importlib import import_module
 from tornado import ioloop, web, wsgi
 from tornado.options import options, define, parse_command_line
 from tornado.log import gen_log
 from utils import dotenv
 
+# uvloop should be setup on the interpreter startup to avoid tricky problems
+try:
+    import uvloop
+    import asyncio
+    from tornado.platform.asyncio import AsyncIOMainLoop
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    AsyncIOMainLoop().install()
+except ImportError:
+    warnings.warn("Cannot import asyncio/uvloop, fallback to Tornado's IOLoop")
+
 define('debug', type=bool, default=False, help='run server in debug mode',
        callback=lambda debug: os.environ.update({'DEBUG': str(debug)}))
-define('uvloop', type=bool, default=True, help='run server with uvloop')
-define('django', type=bool, default=False, help='enable django integration')
-define('django_threads', type=int, default=0, help='django thread pool size')
 define('port', type=int, default=8000, help='listening port')
 define('addr', type=str, default='0.0.0.0', help='listening address')
+define('django', type=bool, default=False, help='enable django integration')
+define('django_threads', type=int, default=0, help='django thread pool size')
 
 
 def main():
     # load environment variables from .env file
     dotenv.read_dotenv(dotenv.find_dotenv())
     parse_command_line()
-
-    if options.uvloop:
-        from tornado.platform.asyncio import AsyncIOMainLoop
-        try:
-            import asyncio
-            import uvloop
-            asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-            AsyncIOMainLoop().install()
-        except ImportError:
-            options.uvloop = False
-            gen_log.error(
-                'cannot import asyncio and uvloop, fallback to IOLoop')
 
     # serve django admin in debug mode
     # NOTE: any django related things must be AFTER parsing options

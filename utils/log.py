@@ -26,18 +26,16 @@ def config_logger(func=None,
                   max_mb=10, backup_count=5,
                   enable_root=False, root_level=None,
                   suppress=('requests', 'urllib3')):
-    if isinstance(level, six.string_types):
-        level = getattr(logging, level.upper())
-    if isinstance(root_level, six.string_types):
-        root_level = getattr(logging, root_level.upper())
-
-    def decorator(func):
-        global log
-        if log._configured:
-            warnings.warn('global logger has already been configured, '
-                          'this config will not take effect',
-                          UserWarning, 3)
-            return func
+    global log
+    if log._configured:
+        warnings.warn(
+            "Global logger has already been configured, won't do anything.",
+            UserWarning, 3)
+    else:
+        if isinstance(level, six.string_types):
+            level = getattr(logging, level.upper())
+        if isinstance(root_level, six.string_types):
+            root_level = getattr(logging, root_level.upper())
 
         # suppress the massive logging message from un-welcomed loggers
         # default: requests, urllib3
@@ -70,16 +68,15 @@ def config_logger(func=None,
             log.addHandler(handler)
 
         log._configured = True
-        return func
 
     if func is not None:
-        return decorator(func)
+        return func
 
-    return decorator
+    return lambda func: func
 
 
 def suppress_logger(name, level):
-    msg = 'suppress level of logger "{}" to "{}"'.format(
+    msg = 'Suppress level of logger "{}" to "{}".'.format(
         name, logging.getLevelName(level))
     warnings.warn(msg, UserWarning, 2)
     logging.getLogger(name).setLevel(level)
