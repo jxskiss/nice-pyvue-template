@@ -350,16 +350,22 @@ class scheduler(object):
 
     Usage:
         register a scheduled task:
-            @scheduler(start_at, every, random_sleep)
+            @scheduler(start_at=time.time() + 1, every='minute', random_sleep=5)
             def task():
                 pass
+
+            @scheduler(start_at='2018-01-30 02:00:00+08:00', every='2days')
+            def task():
+                pass
+
         register a crontab-style task:
             @scheduler(cron='* * * * *', random_sleep=5)
             def task():
                 pass
+
         start all scheduled tasks: `scheduler.start_all()`
     """
-    _tasks = []
+    tasks = []
 
     def __init__(self, start_at=None, every=None,  # ScheduledCallback
                  cron=None,  # CronCallback
@@ -387,11 +393,11 @@ class scheduler(object):
                              'callback_seconds must be given')
 
     def __call__(self, task):
-        self._tasks.append(self.sch_class(task, **self.sch_kwargs))
+        self.tasks.append(self.sch_class(task, **self.sch_kwargs))
         return task
 
     @classmethod
     def start_all(cls):
         """Start all scheduled tasks."""
-        for task in cls._tasks:
+        for task in cls.tasks:
             task.start()
