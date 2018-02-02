@@ -3,6 +3,8 @@
 
 class FilterClause(object):
 
+    __slots__ = ('clause', )
+
     def __init__(self, clause=''):
         self.clause = clause
 

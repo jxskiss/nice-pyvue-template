@@ -202,12 +202,11 @@ def make_js_api():
             }
 
     # redirect Fabric's output to stderr
-    stdout_bak = sys.stdout
     sys.stdout = sys.stderr
     if api_defs:
-        stdout_bak.write(_JS_API_HEADER)
+        sys.__stdout__.write(_JS_API_HEADER)
     for group, defs in api_defs.items():
-        stdout_bak.write(_JS_MODULE_TMPL.format(
+        sys.__stdout__.write(_JS_MODULE_TMPL.format(
             module=group, defs=json.dumps(defs, indent=2)))
 
 
@@ -250,10 +249,9 @@ def make_rest_api(resource, path_prefix, plural=None):
     module = module[1].lower() + module[1:]
 
     # redirect Fabric's output to stderr
-    stdout_bak = sys.stdout
     sys.stdout = sys.stderr
-    stdout_bak.write(_JS_API_HEADER)
-    stdout_bak.write(_JS_MODULE_TMPL.format(
+    sys.__stdout__.write(_JS_API_HEADER)
+    sys.__stdout__.write(_JS_MODULE_TMPL.format(
         module=module, defs=json.dumps(api_defs, indent=2)))
 
 
@@ -276,12 +274,11 @@ def ngx_spa_loc(page=''):
     }
     """
     # redirect Fabric's output to stderr
-    stdout_bak = sys.stdout
     sys.stdout = sys.stderr
-    stdout_bak.write(tmpl.replace('PAGE', page))
+    sys.__stdout__.write(tmpl.replace('PAGE', page))
 
 
-def make_proxy_loc(location, upstream, *backends):
+def ngx_proxy_loc(location, upstream, *backends):
     """
     Make Nginx proxy location config for upstream.
     """
@@ -291,35 +288,43 @@ upstream UPSTREAM {
 }
 """
     # redirect Fabric's output to stderr
-    stdout_bak = sys.stdout
     sys.stdout = sys.stderr
     if upstream and backends:
-        stdout_bak.write(
+        sys.__stdout__.write(
             upstream_tmpl.replace('UPSTREAM', upstream)
             .replace('SERVERS', ';\n    server '.join(backends))
         )
 
     location_tmpl = """
 location LOCATION {
-    # client_max_body_size    10m;
-
-    proxy_read_timeout      60s;
-    proxy_connect_timeout   60s;
-    proxy_redirect          off;
-    proxy_http_version      1.1;
+    # client_max_body_size    50m;
 
     proxy_set_header Host $http_host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Scheme $scheme;
     # proxy_set_header X-Forwarded-Ssl on;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
 
+    proxy_read_timeout      60s;
+    proxy_connect_timeout   60s;
+    proxy_http_version      1.1;
+    proxy_redirect          http:// $scheme://;
+
     proxy_pass http://UPSTREAM;
 }
 """
-    stdout_bak.write(
+    sys.__stdout__.write(
         location_tmpl.replace('LOCATION', location)
         .replace('UPSTREAM', upstream or backends[0])
     )
+
+
+def ngx_https():
+    print('Please see contrib/https/nginx.conf for example and details.')
+
+
+def runtests(pattern='test*.py'):
+    local("python -m unittest discover -s tests -p %s" % pattern)

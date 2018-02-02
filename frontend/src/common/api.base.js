@@ -92,10 +92,6 @@ function cleanupHeaders (headers) {
 
 function resolveHeaders (method, defaults = {}, extras = {}) {
   method = method && method.toLowerCase();
-  if (!/^(get|post|put|delete|patch|options|head)$/.test(method)) {
-    throw new Error(`resolveHeaders: illegal method:"${method}"`);
-  }
-
   const commonHeaders = defaults.common || {};
   const headersForMethod = defaults[method] || {};
   return cleanupHeaders({
@@ -156,9 +152,6 @@ function bindModuleMethod (method, moduleInstance) {
 }
 
 function mapParamsToPathVariables (url, params) {
-  if (!url || typeof url !== 'string') {
-    throw new Error(`url ${url} should be a string`);
-  }
   return url.replace(/:(\w+)/ig, (_, key) => params[key]);
 }
 
@@ -166,9 +159,6 @@ function bindApis (defs = {}) {
   return module => {
     const instance = module.prototype || module;
     for (const [name, def] of Object.entries(defs)) {
-      if (!def || Object.keys(def).length === 0) {
-        throw new Error(`invalid definition for API "${name}()"`)
-      }
       Object.defineProperty(instance, name, {
         configurable: true,
         writable: true,
@@ -194,10 +184,24 @@ function bindApis (defs = {}) {
 export default function makeApiModule (apiDefs) {
   for (let [name, def] of Object.entries(apiDefs)) {
     if (typeof def === 'string') {
-      apiDefs[name] = {method: 'GET', url: def};
+      def = { method: 'GET', url: def };
     } else if (isArray(def)) {
-      apiDefs[name] = {method: def[0], url: def[1]};
+      if (def[0][0] === '/') {
+        def = { method: def[1], url: def[0] };
+      } else {
+        def = { method: def[0], url: def[1] };
+      }
     }
+    if (!def || !def.method || !def.url) {
+      throw new Error(`makeApiModule: invalid definition for API "${name}()"`)
+    } else if (!def.url || typeof def.url !== 'string') {
+      throw new Error(`makeApiModule: url "${def.url}" should be a string`);
+    } else if (def.url[0] !== '/') {
+      throw new Error(`makeApiModule: url "${def.url}" should be absolute path`);
+    } else if (!/^(get|post|put|delete|patch|options|head)$/.test(def.method.toLowerCase())) {
+      throw new Error(`makeApiModule: illegal api method "${def.method}"`)
+    }
+    apiDefs[name] = def
   }
   return class extends BaseApiModule {
     constructor (options) {
