@@ -84,7 +84,7 @@ def main():
         handlers=handlers,
         debug=options.debug,
         cookie_secret=((dj_settings and dj_settings.SECRET_KEY) or
-                       '{{ secret_key }}'),
+                       os.getenv('SECRET_KEY', 'your_secret_key')),
         django_enabled=options.django,
         dj_settings=dj_settings,
         template_path='templates',

@@ -528,6 +528,7 @@ module.exports = (options = {}) => {
     exports.plugins.push(new BundleAnalyzerPlugin())
   }
 
+  // Dump the dramatic webpack config to help debugging.
   RegExp.prototype.toJSON = RegExp.prototype.toString;
   fs.writeFileSync('webpack.config.log.json', JSON.stringify(exports, null, 2))
   return exports

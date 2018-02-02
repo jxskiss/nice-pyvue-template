@@ -16,7 +16,7 @@ import sys
 import warnings
 
 # quote sign used in generated template .env file
-_QUOTE_SIGN = ''
+_QUOTE_SIGN = '\''
 # what to do if variable not in environment: raise, warn, ignore
 _IF_ENV_MISS = 'raise'
 # whether override existing variable from os with values from .env file
@@ -29,7 +29,7 @@ _ALL_PARSED = {}
 
 DEBUG = False
 LOG_LEVEL = 'INFO'
-TIMEZONE = 'Asia/Shanghai'
+TIME_ZONE = 'Asia/Shanghai'
 
 SECRET_DATABASE_URL = 'sqlite:///dev.db'
 SECRET_EMAIL_URL = 'smtp://user@domain.com:pass@smtp.example.com:465/?ssl=True'
@@ -50,7 +50,10 @@ def _parse(dir_, vars_):
             if var not in os.environ:
                 absent.append(var)
             else:
-                _ALL_PARSED[var] = os.getenv(var)
+                value = os.getenv(var)
+                if isinstance(eval(var), bool):
+                    value = value.lower() in ('true', 'yes', 'on')
+                _ALL_PARSED[var] = value
     if absent:
         msg = 'miss environment variables: %s' % ', '.join(absent)
         if _IF_ENV_MISS == 'raise':

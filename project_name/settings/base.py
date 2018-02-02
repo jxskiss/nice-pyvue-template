@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/{{ docs_version }}/ref/settings/
 import sys
 import os
 
+import env_settings
 from utils.confurl import parse_db_url, parse_email_url
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -22,10 +23,10 @@ PROJECT_ROOT = os.path.dirname(DJANGO_ROOT)
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', '{{ secret_key }}')
+SECRET_KEY = env_settings.SECRET_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', 'yes')
+DEBUG = env_settings.DEBUG
 
 ALLOWED_HOSTS = ['*']
 
@@ -89,10 +90,8 @@ LOGIN_URL = '/admin/login/'
 # Database
 # https://docs.djangoproject.com/en/1.9/ref/settings/#databases
 
-SECRET_DATABASE_URL = os.getenv('SECRET_DATABASE_URL', '')
-
 DATABASES = {
-    'default': parse_db_url('django', SECRET_DATABASE_URL),
+    'default': parse_db_url('django', env_settings.SECRET_DATABASE_URL),
 }
 
 
@@ -124,7 +123,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = os.getenv('TIMEZONE', 'Asia/Shanghai')
+TIME_ZONE = env_settings.TIME_ZONE
 
 USE_I18N = True
 
@@ -147,7 +146,7 @@ if os.path.exists(_fe_dist_static):
 
 
 # Logging
-_env_log_level = os.getenv('LOG_LEVEL')
+_env_log_level = env_settings.LOG_LEVEL
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -228,9 +227,8 @@ LOGGING = {
 
 
 # Email settings
-SECRET_EMAIL_URL = os.getenv('SECRET_EMAIL_URL', '')
 # update EMAIL_ BACKEND, HOST, HOST_USER, HOST_PASSWORD, PORT settings
-vars().update(parse_email_url('django', SECRET_EMAIL_URL))
+vars().update(parse_email_url('django', env_settings.SECRET_EMAIL_URL))
 # site configuration
 EMAIL_SUBJECT_PREFIX = '[{{ project_name }}] '
 DEFAULT_FROM_EMAIL = 'no-reply <no-reply@example.com>'

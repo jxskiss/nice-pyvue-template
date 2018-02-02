@@ -191,7 +191,7 @@ cd ..
 ```bash
 export DEBUG=False
 export LOG_LEVEL=INFO
-export TIMEZONE=Asia/Shanghai
+export TIME_ZONE=Asia/Shanghai
 
 export SECRET_DATABASE_URL=
 export SECRET_EMAIL_URL=

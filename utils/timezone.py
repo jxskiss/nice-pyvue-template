@@ -5,7 +5,7 @@ import pytz
 
 
 def get_current_timezone():
-    tz = os.getenv('TZ', os.getenv('TIMEZONE', os.getenv('TIME_ZONE')))
+    tz = os.getenv('TZ') or os.getenv('TIME_ZONE') or os.getenv('TIMEZONE')
     if tz:
         return pytz.timezone(tz)
     return pytz.utc

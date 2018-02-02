@@ -936,7 +936,7 @@ class _Mock(object):
                 lambda obj: json.loads(self.fix_json(
                     open(file, encoding='utf8').read())), ttl=ttl))
 
-        def deco(func):
+        def decorator(func):
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
                 try:
@@ -960,7 +960,7 @@ class _Mock(object):
 
             return wrapper
 
-        return deco
+        return decorator
 
     # shortcut to allow using the mock decorator without parameters
     __call__ = from_file

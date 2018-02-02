@@ -49,6 +49,7 @@ def global_engine(dsn, pool=True):
     pool_class = None if pool else NullPool
     if not dsn:
         return None
-    if dsn not in _engines:
-        _engines[dsn] = sa.create_engine(dsn, poolclass=pool_class)
-    return _engines[dsn]
+    cache_key = '{}_pool_{}'.format(dsn, str(bool(pool)).lower())
+    if cache_key not in _engines:
+        _engines[cache_key] = sa.create_engine(dsn, poolclass=pool_class)
+    return _engines[cache_key]
