@@ -29,8 +29,8 @@ from utils.tornado.api import ApiRequestHandler
 from utils.tornado.scheduler import scheduler
 
 __all__ = [
-    'options', 'scheduler', 'service', 'health', 'heartbeat', 'run',
-    'route', 'static', 'redirect', 'error',
+    'options', 'scheduler', 'service', 'health', 'heartbeat',
+    'make_app', 'run', 'route', 'static', 'redirect', 'error',
     'get', 'post', 'put', 'delete', 'patch'
 ]
 
@@ -109,18 +109,17 @@ def heartbeat(url, interval=60, random_sleep=5, raise_error=False, **kwargs):
 
     @scheduler(start_at=time.time() + 1, every='%sseconds' % interval,
                random_sleep=random_sleep)
-    async def beat():
+    @gen.coroutine
+    def beat():
         gen_log.info('sending heartbeat to: %s', url)
         client = AsyncHTTPClient()
-        resp = await client.fetch(url, raise_error=raise_error, **kwargs)
+        resp = yield client.fetch(url, raise_error=raise_error, **kwargs)
         if resp.code != 200:
             gen_log.warning('heartbeat failed with status code %s: %r',
                             resp.code, resp.error)
 
 
-def run(**app_kwargs):
-    options.parse_command_line()
-
+def make_app(**app_kwargs):
     if not _services:
         raise RuntimeError(
             'No service registered, make sure they are defined properly!')
@@ -129,29 +128,35 @@ def run(**app_kwargs):
             'No handler registered, make sure they are defined properly!')
     for svc in _services:
         gen_log.debug('Registered service: %r', svc)
-    for url, handler, *_ in _handlers:
+    for handler_tuple in _handlers:
+        url, handler = handler_tuple[:2]
         gen_log.debug('Registered handler: %r, %r, subclass of: %r',
                       url, handler, handler.mro()[1])
-
-    xheaders = app_kwargs.pop('xheaders', False)
     app = Application(
         handlers=_handlers,
-        debug=options.debug,
         **app_kwargs
     )
+    return app
 
-    app.listen(options.port, options.addr, xheaders=xheaders)
+
+def run(**server_kwargs):
+    options.parse_command_line()
+
+    app = make_app(debug=options.debug)
+    app.listen(options.port, options.addr, **server_kwargs)
     scheduler.start_all()
 
     ioloop.IOLoop.instance().start()
 
 
 if __name__ == '__main__':
+
     @service
     class Service(object):
         @get('^/hello$')
-        async def hello(self):
-            await gen.sleep(0.001)
+        @gen.coroutine
+        def hello(self):
+            yield gen.sleep(0.001)
             name = self.get_argument('name', '')
             self.finish('hello, %s!' % (name or 'anonymous'))
 
