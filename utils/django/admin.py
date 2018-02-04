@@ -7,9 +7,11 @@ __all__ = [
     'DropdownFilter', 'DropdownRelatedFilter', 'DropdownChoicesFilter',
     'create_modeladmin',
     'make_related_field', 'make_json_field',
-    'LastWeekDateFilter', 'make_last_week_date_filter',
+    'LastDaysFilter', 'make_last_days_filter',
     'IsNullOrNotFilter', 'make_isnull_or_not_filter',
+    'NullableBooleanFilter', 'make_nullable_boolean_filter',
     'FKUserFilter', 'make_fk_user_filter',
+    'RangeValueFilter', 'make_range_value_filter',
 ]
 
 
@@ -78,16 +80,17 @@ def make_json_field(field, short_description):
     return field_function
 
 
-class LastWeekDateFilter(admin.SimpleListFilter):
+class LastDaysFilter(admin.SimpleListFilter):
     title = ''
     parameter_name = ''
-    template = 'common/admin/dropdown_filter.html'
     date_field = ''
+    days_count = 7
+    template = 'common/admin/dropdown_filter.html'
 
     def lookups(self, request, model_admin):
         today = timezone.now().date()
         lookups = []
-        for x in range(7):
+        for x in range(self.days_count):
             date = (today - timezone.timedelta(days=x)).strftime('%Y-%m-%d')
             lookups.append((date, date))
         return lookups
@@ -105,22 +108,24 @@ class LastWeekDateFilter(admin.SimpleListFilter):
         return queryset
 
 
-def make_last_week_date_filter(field, title=None, parameter_name=None,
-                               template='common/admin/dropdown_filter.html'):
+def make_last_days_filter(field, days=7,
+                          title=None, parameter_name=None,
+                          template='common/admin/dropdown_filter.html'):
     """
     Create date filter in last week for given field.
     """
     _title = title or '{} Date'.format(field.title())
-    _parameter_name = parameter_name or '{}_last_week_data'.format(field)
+    _parameter_name = parameter_name or '{}_date'.format(field)
     _template = template
 
-    class _ThisLastWeekDateFilter(LastWeekDateFilter):
+    class _TheLastDaysFilter(LastDaysFilter):
         title = _title
         parameter_name = _parameter_name
         template = _template
         date_field = field
+        days_count = days
 
-    return _ThisLastWeekDateFilter
+    return _TheLastDaysFilter
 
 
 class IsNullOrNotFilter(admin.SimpleListFilter):
@@ -151,19 +156,64 @@ def make_isnull_or_not_filter(field, title=None, parameter_name=None):
     _title = title or '{} Is Null'.format(field.title())
     _parameter_name = parameter_name or '{}_isnull'.format(field)
 
-    class _ThisIsNullOrNotFilter(IsNullOrNotFilter):
+    class _TheIsNullOrNotFilter(IsNullOrNotFilter):
         title = _title
         parameter_name = _parameter_name
         nullable_field = field
 
-    return _ThisIsNullOrNotFilter
+    return _TheIsNullOrNotFilter
+
+
+class NullableBooleanFilter(admin.SimpleListFilter):
+    title = ''
+    parameter_name = ''
+    boolean_field = ''
+
+    def lookups(self, request, model_admin):
+        return [
+            ('all', 'All'),
+            ('yes', 'Yes'),
+            ('no', 'No'),
+            ('null', 'Unknown'),
+        ]
+
+    def queryset(self, request, queryset):
+        f = self.value()
+        if f == 'yes':
+            return queryset.filter(**{self.boolean_field: True})
+        elif f == 'no':
+            return queryset.filter(**{self.boolean_field: False})
+        elif f == 'null':
+            return queryset.filter(**{self.boolean_field + '__isnull': True})
+        return queryset
+
+    def choices(self, changelist):
+        for lookup, title in self.lookup_choices:
+            yield {
+                'selected': self.value() == lookup,
+                'query_string': changelist.get_query_string(
+                    {self.parameter_name: lookup}, []),
+                'display': title,
+            }
+
+
+def make_nullable_boolean_filter(field, title=None, parameter_name=None):
+    _title = title or field.title()
+    _parameter_name = parameter_name or field
+
+    class _TheNullableBooleanFilter(NullableBooleanFilter):
+        title = _title
+        parameter_name = _parameter_name
+        boolean_field = field
+
+    return _TheNullableBooleanFilter
 
 
 class FKUserFilter(admin.SimpleListFilter):
     title = ''
     parameter_name = ''
-    template = 'common/admin/dropdown_filter.html'
     user_field = ''
+    template = 'common/admin/dropdown_filter.html'
 
     def lookups(self, request, model_admin):
         user_model = auth.get_user_model()
@@ -191,10 +241,65 @@ def make_fk_user_filter(field, title=None, parameter_name=None,
     _parameter_name = parameter_name or '{}_id__exact'.format(field)
     _template = template
 
-    class _ThisFKUserFilter(FKUserFilter):
+    class _TheFKUserFilter(FKUserFilter):
         title = _title
         parameter_name = _parameter_name
         template = _template
         user_field = field
 
-    return _ThisFKUserFilter
+    return _TheFKUserFilter
+
+
+class RangeValueFilter(admin.SimpleListFilter):
+    title = ''
+    parameter_name = ''
+    value_field = ''
+    value_ranges = ()
+    template = 'common/admin/dropdown_filter.html'
+
+    def lookups(self, request, model_admin):
+        if not self.value_ranges:
+            return []
+        result = [('0', '< %s' % self.value_ranges[0][0])]
+        for idx, r in enumerate(self.value_ranges):
+            result.append((str(idx + 1), '[{} - {})'.format(*r)))
+        result.append(
+            (str(len(self.value_ranges) + 1),
+             '>= %s' % self.value_ranges[-1][1]))
+        return result
+
+    def queryset(self, request, queryset):
+        if not self.value_ranges:
+            return queryset
+        value = self.value
+        if int(value) <= 0:
+            return queryset.filter(**{
+                self.value_field + '__lt': self.value_ranges[0][0]
+            })
+        elif int(value) > len(self.value_ranges):
+            return queryset.filter(**{
+                self.value_field + '__gte': self.value_ranges[-1][1]
+            })
+        else:
+            r = self.value_ranges[int(value)-1]
+            return queryset.filter(**{
+                self.value_field + '__gte': r[0],
+                self.value_field + '__lt': r[1]
+            })
+
+
+def make_range_value_filter(field, title=None, parameter_name=None,
+                            value_ranges=None,
+                            template='common/admin/dropdown_filter.html'):
+    _title = title or '{} Ranges'.format(field.title())
+    _parameter_name = parameter_name or '{}_range'.format(field)
+    _value_ranges = sorted(value_ranges)
+    _template = template
+
+    class _TheRangeValueFilter(RangeValueFilter):
+        title = _title,
+        parameter_name = _parameter_name
+        value_ranges = _value_ranges
+        template = _template
+
+    return _TheRangeValueFilter
